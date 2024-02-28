@@ -1,0 +1,11 @@
+import { defineConfig, LibraryFormats } from 'vite';
+
+export default defineConfig({
+  build: {
+    lib: {
+      entry: 'src/index.ts',
+      formats: ['cjs', 'es'],
+      fileName: 'my-library'
+    }
+  }
+});
