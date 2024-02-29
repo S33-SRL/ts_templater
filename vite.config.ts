@@ -5,7 +5,7 @@ export default defineConfig({
     lib: {
       entry: 'src/index.ts',
       formats: ['cjs', 'es'],
-      fileName: 'my-library'
+      fileName: 'ts_templater'
     }
   }
 });

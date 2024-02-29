@@ -298,7 +298,7 @@ export class TsTemplater  {
         if (params.length === 1) return params[0];
 
         if (params.length === 3) {
-            const mdt = moment(params[0], params[1]);
+            const mdt =  moment(params[0], params[1]);
             return mdt.isValid() ? mdt.format(params[2]) : '';
         }
         const mdt = moment(params[0]);
