@@ -1,17 +1,30 @@
-import * as moment from "moment";
+import dayjs from 'dayjs';
 import BigNumber from 'bignumber.js';
 
 export class TsTemplater  {
 
-    private currentLang:string = 'it';
-    public changeLang(lang:string){
-        this.currentLang = lang;
-        moment.locale(this.currentLang);
-    }
+    private formatParts = /^([\S\s]+?)\.\.\.([\S\s]+)/;
+    escape(str:string){
+        const metaChar = /[-[\]{}()*+?.\\^$|,]/g;
+        return str.replace(metaChar, "\\$&");
+    };
 
+    private currentLang:string ;
+    // Funzione per cambiare la lingua in dayjs
+    async changeDayjsLocale(lang: string) {
+        try {
+            this.currentLang = lang;
+            // Prova ad importare la localizzazione specifica dinamicamente
+            const locale = await import(`dayjs/locale/${lang}.js`);
+            dayjs.locale(lang); // Imposta la locale in dayjs
+        } catch (error) {
+            console.error(`Locale ${lang} not found for dayjs`, error);
+        }
+    }
     
-    constructor ()
+    constructor ( lang: string = 'en') 
     {
+        this.changeDayjsLocale(lang);
         this.functions["Date"] = this.intDate;
         this.functions["Bool"] = this.intToBool;
         this.functions["Number"] = this.toNumber;
@@ -29,47 +42,37 @@ export class TsTemplater  {
         //this.functions["ToList"] = this.intCurrency; // TO DO
         this.functions["ArrayConcat"] = this.intArrayConcat;
         this.functions["ArraySum"] = this.intArraySum;
-
-        moment.locale(this.currentLang);
     }
 
-    private  matchRecursive = function () {
-        var	formatParts = /^([\S\s]+?)\.\.\.([\S\s]+)/,
-            metaChar = /[-[\]{}()*+?.\\^$|,]/g,
-            escape = function (str:string) {
-                return str.replace(metaChar, "\\$&");
-            };
+    matchRecursive (str:string, format:string) {
+        var p = this.formatParts.exec(format);
+        if (!p) throw new Error("format must include start and end tokens separated by '...'");
+        if (p[1] == p[2]) throw new Error("start and end format tokens cannot be identical");
 
-        return function (str:string, format:string) {
-            var p = formatParts.exec(format);
-            if (!p) throw new Error("format must include start and end tokens separated by '...'");
-            if (p[1] == p[2]) throw new Error("start and end format tokens cannot be identical");
+        var	opener = p[1],
+            closer = p[2],
+            /* Use an optimized regex when opener and closer are one character each */
+            iterator: any = new RegExp(format.length == 5 ? "["+this.escape(opener+closer)+"]" : this.escape(opener)+"|"+this.escape(closer), "g"),
+            results = [],
+            openTokens, matchStartIndex, match;
 
-            var	opener = p[1],
-                closer = p[2],
-                /* Use an optimized regex when opener and closer are one character each */
-                iterator: any = new RegExp(format.length == 5 ? "["+escape(opener+closer)+"]" : escape(opener)+"|"+escape(closer), "g"),
-                results = [],
-                openTokens, matchStartIndex, match;
-
-            do {
-                openTokens = 0;
-                while (match = iterator.exec(str)) {
-                    if (match[0] == opener) {
-                        if (!openTokens)
-                            matchStartIndex = iterator.lastIndex;
-                        openTokens++;
-                    } else if (openTokens) {
-                        openTokens--;
-                        if (!openTokens)
-                            results.push(str.slice(matchStartIndex, match.index));
-                    }
+        do {
+            openTokens = 0;
+            while (match = iterator.exec(str)) {
+                if (match[0] == opener) {
+                    if (!openTokens)
+                        matchStartIndex = iterator.lastIndex;
+                    openTokens++;
+                } else if (openTokens) {
+                    openTokens--;
+                    if (!openTokens)
+                        results.push(str.slice(matchStartIndex, match.index));
                 }
-            } while (openTokens && (iterator.lastIndex = matchStartIndex));
+            }
+        } while (openTokens && (iterator.lastIndex = matchStartIndex));
 
-            return results;
-        };
-    }();
+        return results;
+    };
 
     private cache:{} | undefined = undefined ;
 
@@ -86,20 +89,12 @@ export class TsTemplater  {
                 val = val[field];
             return val == key;
         });
-        // let i = 0;
-        // while(array[i]){
-        //   if(`${(array[i][fieldName])}`==key) return array[i];
-        //   i++;
-        // }
-        // return null;
     }
 
-
-
     public parse(template:string, data:any,otherData:any=null, selectorOpen = '{', selectorClose = '}'): any {
+
         let result =  template+'';
         let array = this.matchRecursive(result, `${selectorOpen}...${selectorClose}`);
-        //console.log(`${selectorOpen}...${selectorClose}`, array, data);
         (array || []).forEach(x=>{
             try {
                 let value = null;
@@ -259,8 +254,8 @@ export class TsTemplater  {
         }
         catch(ex)
         {
-            console.log("[INTIF] Parameters",parameters[0]);
-            console.log("[INTIF] ERROR",ex);
+            console.error("[INTIF] Parameters",parameters[0]);
+            console.error("[INTIF] ERROR",ex);
         }
         return ( result ? parameters[1] : parameters[2]);
     }
@@ -298,10 +293,10 @@ export class TsTemplater  {
         if (params.length === 1) return params[0];
 
         if (params.length === 3) {
-            const mdt =  moment(params[0], params[1]);
+            const mdt =  dayjs(params[0], params[1]);
             return mdt.isValid() ? mdt.format(params[2]) : '';
         }
-        const mdt = moment(params[0]);
+        const mdt = dayjs(params[0]);
         return mdt.isValid() ? mdt.format(params[1]) : '';
     }
 
@@ -377,35 +372,29 @@ export class TsTemplater  {
     };
 
     private intArrayConcat = (data: any, params:any[]) => {
-        //console.log('ArrayConcat', params);
         if (!params || params.length < 2) return null;
         let array = data[params[0]];
         let result = '';
         if(Array.isArray(array)){
             array.forEach(x=>{
                 let template = [...params].slice(1).join('|');
-                //console.log("ArrayConcat item", x, template);
                 result += this.parse(template, x, null);
             })
         }
-        //console.log("ArrayConcat result", result);
         return result;
     };
 
     private intArraySum = (data: any, params:any[]) => {
-        //console.log('ArrayConcat', params);
         if (!params || params.length < 2) return null;
         let array = data[params[0]];
         let result = 0;
         if(Array.isArray(array)){
             array.forEach(x=>{
                 let template = [...params].slice(1).join('|');
-                //console.log("ArrayConcat item", x, template);
                 let single = this.parse(template, x, null);
                 if(!isNaN(single)) result += (single*1.0);
             })
         }
-        //console.log("ArrayConcat result", result);
         return result;
     };
 

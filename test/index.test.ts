@@ -1,4 +1,6 @@
 import { TsTemplater } from '../src/index';
+import dayjs from 'dayjs';
+import BigNumber from 'bignumber.js';
 
 const objExample =
   {
@@ -96,7 +98,148 @@ const objExample =
 describe('TsTemplater', () => {
   let tmpEngine = new TsTemplater();
   it('Render single field', () => {
-    const result = tmpEngine.parse('hello {{mainDescription}}', objExample);
+    const result = tmpEngine.parse('hello {mainDescription}', objExample);
     expect(result).toBe('hello ' + objExample.mainDescription);
   });
+
+  it('Navigate fields',() => {
+    const result = tmpEngine.parse('navigate {measureUnit.symbol}', objExample);
+    expect(result).toBe('navigate ' + objExample.measureUnit.symbol);
+  });
+
+  it('Render multi fields',() => {
+    const result = tmpEngine.parse('fields {code} - {shortDescription}', objExample);
+    expect(result).toBe('fields ' + objExample.code + ' - ' + objExample.shortDescription);
+  });
+
+  it('render nasted fields',() => {
+    const result = tmpEngine.parse('nasted {type.description} - {measureUnit.description}', objExample);
+    expect(result).toBe('nasted ' + objExample.type.description + ' - ' + objExample.measureUnit.description);
+  });
+
+  it('render elementby index',() => {
+    const result = tmpEngine.parse('element by index {tags[1].description}', objExample);
+    expect(result).toBe('element by index ' + objExample.tags[1].description);
+  });
+
+  it('render first element in array',() => {
+    const result = tmpEngine.parse('first {prices\[customer,kind\].price} - Buy price: {prices\[supplier,kind\].price}', objExample);
+    expect(result).toBe('first ' + objExample.prices[0].price + ' - Buy price: ' + objExample.prices[1].price);
+  });
+
+  it('Coverting date',() => {
+    const result = tmpEngine.parse('{@Date|2016-06-10T15:19:25.75|DD/MM/YYYY}', objExample);
+    expect(result).toBe( dayjs('2016-06-10T15:19:25.75').format('DD/MM/YYYY'));
+  });
+
+  it('Coverting date from field',() => {
+    const result = tmpEngine.parse('{@Date|{creationDate}|YYYY-MM-DD HH:mm}', objExample);
+    expect(result).toBe( dayjs(objExample.creationDate).format('YYYY-MM-DD HH:mm'));
+  });
+
+  it('Coverting form format to format',() => {
+    const result = tmpEngine.parse('{@Date|02-16-24|MM-DD-YY|DD/MM/YYYY}', objExample);
+    expect(result).toBe( dayjs('02-16-24','MM-DD-YY').format('DD/MM/YYYY'));
+  });
+
+  it('Work with boolean 1',() => {
+    const result = tmpEngine.parse('{@Bool|duck}', objExample);
+    expect(result).toBe('true');
+  });
+
+  it('Work with boolean 2',() => {
+    const result = tmpEngine.parse('{@Bool|false}', objExample);
+    expect(result).toBe('false');
+  });
+
+  it('Work with boolean 3' ,() => {
+    const result = tmpEngine.parse('{@Bool|true}', objExample);
+    expect(result).toBe('true');
+  });
+
+  it('Work with boolean 4' ,() => {
+    const result = tmpEngine.parse('{@Bool|undefined}', objExample);
+    expect(result).toBe('false');
+  });
+
+  it('Work with boolean 5' ,() => {
+    const result = tmpEngine.parse('{@Bool|{installationComponent}}', objExample);
+    expect(result).toBe(''+objExample.installationComponent);
+  });
+
+  it('number format 1' ,() => {
+    const result = tmpEngine.parse('{@Number|}', objExample);
+    expect(result).toBe('');
+  });
+
+  it('number format 2' ,() => {
+    const result = tmpEngine.parse('{@Number|true}', objExample);
+    expect(result).toBe('');
+  });
+
+  it('number format 3' ,() => {
+    const result = tmpEngine.parse('{@Number|012}', objExample);
+    expect(result).toBe(12);
+  });
+
+  it('number format 4' ,() => {
+    const result = tmpEngine.parse('{@Number|23.342}', objExample);
+    expect(result).toBe(23.342);
+  });
+
+  it('number format 5' ,() => {
+    const result = tmpEngine.parse('{@Number|{leadTime}}', objExample);
+    expect(result).toBe(234.56);
+  });
+
+  // it('Currency format 1' ,() => {
+  //   const result = tmpEngine.parse('{@Currency|234.56}', objExample);
+  //   expect(result).toBe('$234.56');
+  // }
+  
+  // it('Currency format 2' ,() => {
+  //   const result = tmpEngine.parse('{@Currency|{prices\[supplier,kind\].price}}', objExample);
+  //   expect(result).toBe('$108.72');
+  // }
+
+  it('Not 1',() => {
+    const result = tmpEngine.parse('{@Not|true}', objExample);
+    expect(result).toBe('false');
+  });
+
+  it('Not 2',() => {
+    const result = tmpEngine.parse('{@Not|{consumable}}', objExample);
+    expect(result).toBe(''+!objExample.consumable);
+  });
+
+  it('Sum 1',() => {
+    const result = tmpEngine.parse('{@Sum|1|2}', objExample);
+    expect(result).toBe(3);
+  })
+
+  it('Sum 2',() => {
+    const result = tmpEngine.parse('{@Sum|{packageQuantity}|2}', objExample);
+    expect(result).toBe(objExample.packageQuantity+2);
+  })
+
+  it('Sum 3',() => {
+    const result = tmpEngine.parse('{@Sum|{packageQuantity}|{leadTime}}', objExample);
+    expect(result).toBe(objExample.packageQuantity+objExample.leadTime);
+  })
+
+  it('Math function 1',() => {
+    const result = tmpEngine.parse('{@Math|*|3|2}', objExample);
+    expect(result).toBe(6);
+  });
+
+  it('Math function 2',() => {
+    const result = tmpEngine.parse('{@Math|/|{packageQuantity}|2}', objExample);
+    expect(result).toBe(objExample.packageQuantity/2);
+  });
+
+  it('Math function 3',() => {
+    const result = tmpEngine.parse('{@Math|%|{leadTime}|{packageQuantity}}', objExample);
+    expect(result).toBe(objExample.leadTime%objExample.packageQuantity);
+  });
+
 });
