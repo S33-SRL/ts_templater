@@ -5,6 +5,7 @@ const config: Config.InitialOptions = {
     testEnvironment: 'node',
     globals: {
       'ts-jest': {
+        tsconfig: '<rootDir>/tsconfig.jest.json',
         useESM: true,
       },
     },
