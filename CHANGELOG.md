@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2025-07-18
+
 ### Added ⭐
 - **NEW**: `Split` function for JSON string array parsing (`{#@Split|jsonString|delimiter}`)
 - Enhanced README with modern visual design including:
