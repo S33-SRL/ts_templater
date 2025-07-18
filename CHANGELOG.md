@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2025-07-18
+
+### Security 🔒
+- **CRITICAL**: Fixed 11 security vulnerabilities (1 high, 10 moderate)
+- Updated build tools to secure versions: Vite 4.5.14 → 6.3.5
+- Resolved DOM Clobbering, XSS, and ReDoS vulnerabilities in development dependencies
+- All security audits now pass with 0 vulnerabilities
+
+### Changed 🔄
+- **Dependencies**: Updated runtime dependencies to latest secure versions:
+  - bignumber.js: 9.1.2 → 9.3.1
+  - dayjs: 1.11.10 → 1.11.13
+  - tslib: 2.6.2 → 2.8.1
+- **Build System**: Upgraded Vite to v6.3.5 for enhanced security and performance
+- **Security**: Applied security patches across all development dependencies
+
+### Technical Improvements 🔧
+- ✅ Maintained 115/115 test coverage (100% pass rate)
+- ✅ Build system compatibility verified with new Vite version
+- ✅ No breaking changes to library functionality
+- ✅ All vulnerability scanners report clean status
+
 ## [0.2.0] - 2025-07-18
 
 ### Added ⭐
