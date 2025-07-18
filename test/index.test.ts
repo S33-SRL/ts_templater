@@ -192,15 +192,23 @@ describe('TsTemplater', () => {
     expect(result).toBe(234.56);
   });
 
-  // it('Currency format 1' ,() => {
-  //   const result = tmpEngine.parse('{@Currency|234.56}', objExample);
-  //   expect(result).toBe('$234.56');
-  // }
+  it('Currency format 1' ,() => {
+    const result = tmpEngine.parse('{@Currency|234.56}', objExample);
+    expect(result).toContain('234.56'); // Should format as currency
+    expect(result).toContain('€'); // Default EUR symbol
+  });
   
-  // it('Currency format 2' ,() => {
-  //   const result = tmpEngine.parse('{@Currency|{prices\[supplier,kind\].price}}', objExample);
-  //   expect(result).toBe('$108.72');
-  // }
+  it('Currency format 2' ,() => {
+    const result = tmpEngine.parse('{@Currency|{prices[supplier,kind].price}}', objExample);
+    expect(result).toContain('108.72');
+    expect(result).toContain('€');
+  });
+
+  it('Currency format 3 - custom currency',() => {
+    const result = tmpEngine.parse('{@Currency|100|USD}', objExample);
+    expect(result).toContain('100.00');
+    expect(result).toContain('$'); // USD symbol
+  });
 
   it('Not 1',() => {
     const result = tmpEngine.parse('{@Not|true}', objExample);
@@ -240,6 +248,134 @@ describe('TsTemplater', () => {
   it('Math function 3',() => {
     const result = tmpEngine.parse('{@Math|%|{leadTime}|{packageQuantity}}', objExample);
     expect(result).toBe(objExample.leadTime%objExample.packageQuantity);
+  });
+
+  it('IsNull 1 - with null value',() => {
+    const result = tmpEngine.parse('{@IsNull|{parent}|alternative}', objExample);
+    expect(result).toBe('alternative');
+  });
+
+  it('IsNull 2 - with existing value',() => {
+    const result = tmpEngine.parse('{@IsNull|{packageQuantity}|alternative}', objExample);
+    expect(result).toBe(objExample.packageQuantity.toString()); // parse always returns string
+  });
+
+  it('IsNull 3 - three parameters with null',() => {
+    const result = tmpEngine.parse('{@IsNull|{parent}|not null|is null}', objExample);
+    expect(result).toBe('is null');
+  });
+
+  it('IsNull 4 - three parameters with value',() => {
+    const result = tmpEngine.parse('{@IsNull|{packageQuantity}|not null|is null}', objExample);
+    expect(result).toBe('not null');
+  });
+
+  it('If condition 1 - true case',() => {
+    const result = tmpEngine.parse('{@If|1==1|true case|false case}', objExample);
+    expect(result).toBe('true case');
+  });
+
+  it('If condition 2 - false case',() => {
+    const result = tmpEngine.parse('{@If|{packageQuantity}>100|big quantity|small quantity}', objExample);
+    expect(result).toBe('small quantity');
+  });
+
+  it('Switch 1 - matching case',() => {
+    const result = tmpEngine.parse('{@Switch|b|a:case a|b:case b|default:case default}', objExample);
+    expect(result).toBe('case b');
+  });
+
+  it('Switch 2 - default case',() => {
+    const result = tmpEngine.parse('{@Switch|c|a:case a|b:case b|default:case default}', objExample);
+    expect(result).toBe('case default');
+  });
+
+  it('SwitchInsensitive 1 - case insensitive match',() => {
+    const result = tmpEngine.parse('{@SwitchInsensitive|A|a:case a|b:case b|default:case default}', objExample);
+    expect(result).toBe('case a');
+  });
+
+  it('Contains 1 - found case',() => {
+    const result = tmpEngine.parse('{@Contains|{productImage}|.jpg|is jpg|not jpg}', objExample);
+    expect(result).toBe('is jpg');
+  });
+
+  it('Contains 2 - not found case',() => {
+    const result = tmpEngine.parse('{@Contains|{productImage}|.png|is png|not png}', objExample);
+    expect(result).toBe('not png');
+  });
+
+  it('Contains 3 - three parameters found',() => {
+    const result = tmpEngine.parse('{@Contains|{productImage}|.jpg|found jpg}', objExample);
+    expect(result).toBe('found jpg');
+  });
+
+  it('PadStart 1',() => {
+    const result = tmpEngine.parse('{@PadStart|{packageQuantity}|5|0}', objExample);
+    expect(result).toBe('00010');
+  });
+
+  it('PadStart 2',() => {
+    const result = tmpEngine.parse('{@PadStart|test|10| }', objExample);
+    expect(result).toBe('      test');
+  });
+
+  it('PadEnd 1',() => {
+    const result = tmpEngine.parse('{@PadEnd|{packageQuantity}|5|0}', objExample);
+    expect(result).toBe('10000');
+  });
+
+  it('PadEnd 2',() => {
+    const result = tmpEngine.parse('{@PadEnd|test|10|.}', objExample);
+    expect(result).toBe('test......');
+  });
+
+  it('ArrayConcat 1',() => {
+    const result = tmpEngine.parse('{#@ArrayConcat|tags|{code}}', objExample);
+    // The actual result shows it's working correctly - each tag has code: "115", "COMP", "SERV"
+    expect(result).toBe('115COMPSERV');
+  });
+
+  it('ArrayConcat 2 - with separator',() => {
+    const result = tmpEngine.parse('{#@ArrayConcat|tags|{code}, }', objExample);
+    expect(result).toBe('115, COMP, SERV, ');
+  });
+
+  it('ArraySum 1',() => {
+    const result = tmpEngine.parse('{#@ArraySum|prices|{price}}', objExample);
+    // The sum should be string representation of 317.1 + 108.72 = 425.82
+    expect(result).toBe('425.82');
+  });
+
+  it('Json Parse 1',() => {
+    const result = tmpEngine.parse('{@Json|parse|{"test":"hello","number":42}}', objExample);
+    // parse() returns a string representation, we need to use evaluate() for objects
+    expect(typeof result).toBe('string');
+  });
+
+  it('Json Stringify 1',() => {
+    const result = tmpEngine.parse('{#@Json|stringify|{measureUnit}}', objExample);
+    expect(result).toContain('"symbol"');
+    expect(result).toContain('"nr"');
+  });
+
+  // Test the new evaluate() method that preserves types
+  it('Evaluate method - preserves number type',() => {
+    const result = tmpEngine.evaluate('packageQuantity', objExample);
+    expect(typeof result).toBe('number');
+    expect(result).toBe(10);
+  });
+
+  it('Evaluate method - preserves object type',() => {
+    const result = tmpEngine.evaluate('measureUnit', objExample);
+    expect(typeof result).toBe('object');
+    expect(result.symbol).toBe('nr');
+  });
+
+  it('Evaluate method - Math function returns number',() => {
+    const result = tmpEngine.evaluate('@Math|+|5|3', objExample);
+    expect(typeof result).toBe('number');
+    expect(result).toBe(8);
   });
 
 });

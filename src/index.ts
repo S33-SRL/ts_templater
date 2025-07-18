@@ -9,14 +9,14 @@ export class TsTemplater  {
         return str.replace(metaChar, "\\$&");
     };
 
-    private currentLang:string ;
-    // Funzione per cambiare la lingua in dayjs
+    private currentLang:string |undefined = undefined;
+    // Function to change the language in dayjs
     async changeDayjsLocale(lang: string) {
         try {
             this.currentLang = lang;
-            // Prova ad importare la localizzazione specifica dinamicamente
+            // Try to import the specific localization dynamically
             const locale = await import(`dayjs/locale/${lang}.js`);
-            dayjs.locale(lang); // Imposta la locale in dayjs
+            dayjs.locale(lang); // Set the locale in dayjs
         } catch (error) {
             console.error(`Locale ${lang} not found for dayjs`, error);
         }
@@ -28,7 +28,7 @@ export class TsTemplater  {
         this.functions["Date"] = this.intDate;
         this.functions["Bool"] = this.intToBool;
         this.functions["Number"] = this.toNumber;
-        //this.functions["Currency"] = this.intCurrency; TO DO 
+        this.functions["Currency"] = this.intCurrency;
         this.functions["IsNull"] = this.intIsNull;
         this.functions["Not"] = this.intNot;
         this.functions["Sum"] = this.intSum;
@@ -39,9 +39,10 @@ export class TsTemplater  {
         this.functions["Contains"] = this.intContains
         this.functions["PadStart"] = this.intPadStart;
         this.functions["PadEnd"] = this.intPadEnd;
-        //this.functions["ToList"] = this.intCurrency; // TO DO
+        //this.functions["ToList"] = this.intCurrency; // TODO
         this.functions["ArrayConcat"] = this.intArrayConcat;
         this.functions["ArraySum"] = this.intArraySum;
+        this.functions["Json"] = this.intJson;
     }
 
     matchRecursive (str:string, format:string) {
@@ -91,6 +92,91 @@ export class TsTemplater  {
         });
     }
 
+    /**
+     * Evaluates a single expression against the provided data and returns the result
+     * with its original type (string, number, boolean, object, array, function, null, undefined).
+     *
+     * @param expression The expression to evaluate (e.g., "user.name", "@Math|+|2|3", "#@ArraySum|items|{price}")
+     * @param data The main data context.
+     * @param otherData The secondary data context (used by '##@').
+     * @returns The evaluation result, preserving the original type.
+     */
+    public evaluate(expression: string, data: any, otherData: any = null): any {
+        try {
+            let value: any = null;
+            const trimmedExpression = expression.trim(); // Remove leading/trailing whitespace
+
+            // 1. Check special function syntaxes (!@, @, #@, ##@)
+            if (trimmedExpression.indexOf('!@') === 0 && trimmedExpression.indexOf('|') > 0) {
+                const parameters = trimmedExpression.split('|');
+                const functionName = parameters[0].substring(2);
+                if (this.functions[functionName]) {
+                     // Original logic for '!@' passed 'data'
+                     value = this.functions[functionName](data, parameters.slice(1));
+                } else {
+                     console.warn(`Function ${functionName} not found for expression: ${expression}`);
+                     value = undefined; // Or null, or throw an error
+                }
+            } else if (trimmedExpression.indexOf('@') === 0 && trimmedExpression.indexOf('|') > 0) {
+                 const parameters = trimmedExpression.split('|');
+                 const functionName = parameters[0].substring(1);
+                 if (this.functions[functionName]) {
+                    // Call function only with explicit parameters
+                    value = this.functions[functionName](parameters.slice(1));
+                 } else {
+                    console.warn(`Function ${functionName} not found for expression: ${expression}`);
+                    value = undefined;
+                 }
+            } else if (trimmedExpression.indexOf('#@') === 0 && trimmedExpression.indexOf('|') > 0) {
+                 const parameters = trimmedExpression.split('|');
+                 const functionName = parameters[0].substring(2);
+                  if (this.functions[functionName]) {
+                    // Call function passing 'data' and parameters
+                    value = this.functions[functionName](data, parameters.slice(1));
+                 } else {
+                    console.warn(`Function ${functionName} not found for expression: ${expression}`);
+                    value = undefined;
+                 }
+            } else if (trimmedExpression.indexOf('##@') === 0 && trimmedExpression.indexOf('|') > 0) {
+                 const parameters = trimmedExpression.split('|');
+                 const functionName = parameters[0].substring(3);
+                 if (this.functions[functionName]) {
+                    // Call function passing 'otherData', 'data' and parameters
+                    value = this.functions[functionName](otherData, data, parameters.slice(1));
+                 } else {
+                     console.warn(`Function ${functionName} not found for expression: ${expression}`);
+                     value = undefined;
+                 }
+            }
+            // 2. If not a special function, try to resolve as key/path or inline function (like 'exist')
+            else {
+                 // Use parserWithFunction/fromContext logic to resolve the value
+                 // ATTENTION: parserWithFunction might have logic that forces to string (e.g., in 'exist' case).
+                 // To get the original type, we might need to call fromContext directly
+                 // or ensure that parserWithFunction returns the correct type.
+
+                 // Simple approach: use fromContext for simple paths
+                 // This handles "obj.prop", "array[0]", "array[key,field]" but NOT the 'exist|...' syntax
+                 value = this.fromContext(data, trimmedExpression);
+
+                 // TODO: If you need the 'exist|...' logic or others handled in parserWithFunction
+                 // you might need to refactor parserWithFunction to return non-string types
+                 // or integrate its logic here more directly.
+                 // Example (hypothetical, requires parserWithFunction modification):
+                 // value = this.parserWithFunctionReturningAny(data, trimmedExpression);
+            }
+
+            // Return the value as is, without converting it to string
+            // and without changing null/undefined to ''
+            return value;
+
+        } catch (error) {
+            console.error(`Error evaluating expression: "${expression}"`, error);
+            // Decide what to return on error: null, undefined, or rethrow the error
+            return undefined; // or return null; or throw error;
+        }
+    }
+
     public parse(template:string, data:any,otherData:any=null, selectorOpen = '{', selectorClose = '}'): any {
 
         let result =  template+'';
@@ -103,9 +189,16 @@ export class TsTemplater  {
                     let parameters = change.split('|');
                     value = this.functions[parameters[0].substr(2)](data,parameters.slice(1));
                 } else {
-                    if(change.indexOf(selectorOpen)>=0){
+                    // Check if we're dealing with a function call that handles arrays (#@, ##@)
+                    // These functions need raw parameters to process them in the context of each array element
+                    // But simple @ functions need their parameters resolved in the current context
+                    let isArrayFunction = (change.indexOf('#@') === 0 && change.indexOf('|') > 0) ||
+                                        (change.indexOf('##@') === 0 && change.indexOf('|') > 0);
+                    
+                    if(change.indexOf(selectorOpen)>=0 && !isArrayFunction){
                         change = this.parse(x,data, null, selectorOpen, selectorClose);
                     }
+                    
                     if (change.indexOf('@') === 0 && change.indexOf('|') > 0) {
                         let parameters = change.split('|');
                         value = this.functions[parameters[0].substr(1)](parameters.slice(1));
@@ -158,7 +251,7 @@ export class TsTemplater  {
                 case 'exist': {
                     let paramsStr = key.substr(colonsIndexStart + 1, key.length - colonsIndexStart);
                     let params = paramsStr.split(",");
-                    if (params.length = 3) {
+                    if (params.length === 3) {
                         let value = this.fromContext(data, params[0]);
                         let strData = '';
                         if (value) {
@@ -208,7 +301,7 @@ export class TsTemplater  {
                 let lenght = arrayIndexEnd - arrayIndexStart;
                 let position = key.substr(arrayIndexStart + 1, lenght - 1);
                 if(position.indexOf(',')>=0){
-                    let filters = position.split(',');  // Utilizzo le virgole anche per accedere ai campi dentro l'oggetto quindi il primo elemento è valore, mentre tutto il resto sono nomi dei campi
+                    let filters = position.split(',');  // Use commas also to access fields inside the object, so the first element is the value, while all the rest are field names
                     result =  this.arrayFirstByField(result,filters[0],filters.slice(1));
                 } else{
                     switch (position) {
@@ -217,7 +310,7 @@ export class TsTemplater  {
                         }
                         break;
                     case 'last': {
-                        result = result[( < Array < any >> result).length - 1];
+                        result = result[result.length - 1];
                     }
                     break;
                     default: {
@@ -300,18 +393,41 @@ export class TsTemplater  {
         return mdt.isValid() ? mdt.format(params[1]) : '';
     }
 
-    // private intCurrency = (params:any[]) => {
-    //     if (!params || params.length < 1) return null;
-    //     if(!this._currencyPipe) return null;
+    private intCurrency = (params:any[]) => {
+        if (!params || params.length < 1) return null;
+        
+        const value = this.toNumber([params[0]]);
+        if (value === null || isNaN(value)) return null;
 
-    //     let currency = "EUR";
-    //     if(params.length>1 && params[1])
-    //     currency = params[1];
+        let currency = "EUR";
+        let locale = this.currentLang || 'en';
+        
+        // Handle different parameter combinations
+        if (params.length >= 2 && params[1]) {
+            currency = params[1];
+        }
+        if (params.length >= 3 && params[2]) {
+            locale = params[2];
+        }
 
-    //     let result= this._currencyPipe.transform(params[0], currency,"symbol","1.2");
-
-    //     return result;
-    // }
+        try {
+            return new Intl.NumberFormat(locale, {
+                style: 'currency',
+                currency: currency,
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(value);
+        } catch (error) {
+            // Fallback for invalid currency/locale
+            console.warn(`Invalid currency "${currency}" or locale "${locale}", using default`);
+            return new Intl.NumberFormat('en', {
+                style: 'currency',
+                currency: 'EUR',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(value);
+        }
+    }
 
     private intNot = (params:any[]) => {
         if (!params || params.length != 1) return null;
@@ -387,15 +503,17 @@ export class TsTemplater  {
     private intArraySum = (data: any, params:any[]) => {
         if (!params || params.length < 2) return null;
         let array = data[params[0]];
-        let result = 0;
+        let result = new BigNumber(0);
         if(Array.isArray(array)){
             array.forEach(x=>{
                 let template = [...params].slice(1).join('|');
                 let single = this.parse(template, x, null);
-                if(!isNaN(single)) result += (single*1.0);
+                if(!isNaN(single)) {
+                    result = result.plus(new BigNumber(single));
+                }
             })
         }
-        return result;
+        return result.toString();
     };
 
     private intContains = (params: any[]) => {
@@ -420,6 +538,40 @@ export class TsTemplater  {
         let value: string = params[0].toString();
         return value.padEnd(params[1], params[2]);
     }
+
+    // intJson function that if param[0] is 'Parse' parses a JSON string and returns the corresponding object, 
+    // or does the opposite if param[0] is 'Stringify' and converts from object to string
+    private intJson = (data: any, params: any[]) => {
+        if (!params || params.length < 2) return null;
+    
+        try {
+            // For JSON operations, we need the actual object/value, not its string representation
+            // So we use fromContext directly to get the raw value
+            let value = params[1];
+            if (typeof params[1] === "string") {
+                // Remove braces if present and get the raw object
+                let key = params[1];
+                if (key.startsWith('{') && key.endsWith('}')) {
+                    key = key.slice(1, -1);
+                }
+                value = this.fromContext(data, key);
+            }
+    
+            if (params[0].toLowerCase() === "parse") {
+                return typeof value === "string" ? JSON.parse(value) : null;
+            }
+    
+            if (params[0].toLowerCase() === "stringify") {
+                return JSON.stringify(value);
+            }
+    
+            return null;
+        } catch (error) {
+            console.error("intJson error:", error);
+            return null;
+        }
+    }
+
 
 //#endregion
 }
