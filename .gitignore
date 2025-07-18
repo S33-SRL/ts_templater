@@ -1,9 +1,5 @@
 /node_modules
 
-# Package lock files (library should not commit these)
-package-lock.json
-yarn.lock
-
 # Ignore test-related files
 /coverage.data
 /coverage/

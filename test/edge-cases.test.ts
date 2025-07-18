@@ -98,7 +98,7 @@ describe('TsTemplater - Edge Cases and Error Handling', () => {
 
     it('should handle functions with empty parameters', () => {
       const result1 = tmpEngine.parse('{@Sum||5}', objExample);
-      expect(result1).toBe(5); // Should handle empty as 0
+      expect(result1).toBe('5'); // Should handle empty as 0
 
       const result2 = tmpEngine.parse('{@IsNull||default}', objExample);
       expect(result2).toBe('default');
@@ -114,7 +114,7 @@ describe('TsTemplater - Edge Cases and Error Handling', () => {
 
     it('should handle invalid mathematical operations', () => {
       const result1 = tmpEngine.parse('{@Math|/|5|0}', objExample); // Division by zero
-      expect(result1).toBe(Infinity);
+      expect(result1).toBe('Infinity');
 
       const result2 = tmpEngine.parse('{@Math|invalid|5|3}', objExample); // Invalid operator
       expect(result2).toBe(''); // Returns null which becomes empty string

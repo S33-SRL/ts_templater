@@ -22,8 +22,15 @@ export class TsTemplater  {
         }
     }
     
-    constructor ( lang: string = 'en') 
+    constructor ( lang: string = 'en', enableCache: boolean = true) 
     {
+        // Inizializza la cache basandosi sul parametro
+        if (enableCache) {
+            this.cache = {};
+        } else {
+            this.cache = undefined;
+        }
+        
         this.changeDayjsLocale(lang);
         this.functions["Date"] = this.intDate;
         this.functions["Bool"] = this.intToBool;
@@ -75,10 +82,49 @@ export class TsTemplater  {
         return results;
     };
 
-    private cache:{} | undefined = undefined ;
+    private cache:{[key: string]: any} | undefined = undefined ;
 
     public cleanCache(){
-        this.cache = {};
+        if (this.cache !== undefined) {
+            this.cache = {};
+        }
+    }
+
+    /**
+     * Verifica se la cache è attualmente attiva
+     */
+    public isCacheEnabled(): boolean {
+        return this.cache !== undefined;
+    }
+
+    /**
+     * Ottiene il numero di entry nella cache
+     */
+    public getCacheSize(): number {
+        return this.cache ? Object.keys(this.cache).length : 0;
+    }
+
+    /**
+     * Ottiene le chiavi della cache (utile per debugging)
+     */
+    public getCacheKeys(): string[] {
+        return this.cache ? Object.keys(this.cache) : [];
+    }
+
+    /**
+     * Disabilita la cache completamente
+     */
+    public disableCache(): void {
+        this.cache = undefined;
+    }
+
+    /**
+     * Riabilita la cache (se era stata disabilitata)
+     */
+    public enableCache(): void {
+        if (this.cache === undefined) {
+            this.cache = {};
+        }
     }
 
     private arrayFirstByField(array:Array<any>,key:string,fieldName:string[]){
@@ -187,7 +233,13 @@ export class TsTemplater  {
                 let change:string  = x ||'';
                 if (change.indexOf('!@') === 0 && change.indexOf('|') > 0) {
                     let parameters = change.split('|');
-                    value = this.functions[parameters[0].substr(2)](data,parameters.slice(1));
+                    let functionName = parameters[0].substr(2);
+                    if (this.functions[functionName]) {
+                        value = this.functions[functionName](data,parameters.slice(1));
+                    } else {
+                        console.warn(`Function ${functionName} not found for expression: ${change}`);
+                        value = selectorOpen + change + selectorClose; // Return original placeholder
+                    }
                 } else {
                     // Check if we're dealing with a function call that handles arrays (#@, ##@)
                     // These functions need raw parameters to process them in the context of each array element
@@ -201,15 +253,33 @@ export class TsTemplater  {
                     
                     if (change.indexOf('@') === 0 && change.indexOf('|') > 0) {
                         let parameters = change.split('|');
-                        value = this.functions[parameters[0].substr(1)](parameters.slice(1));
+                        let functionName = parameters[0].substr(1);
+                        if (this.functions[functionName]) {
+                            value = this.functions[functionName](parameters.slice(1));
+                        } else {
+                            console.warn(`Function ${functionName} not found for expression: ${change}`);
+                            value = selectorOpen + change + selectorClose; // Return original placeholder
+                        }
                     }
                     else if (change.indexOf('#@') === 0 && change.indexOf('|') > 0) {
                         let parameters = change.split('|');
-                        value = this.functions[parameters[0].substr(2)](data,parameters.slice(1));
+                        let functionName = parameters[0].substr(2);
+                        if (this.functions[functionName]) {
+                            value = this.functions[functionName](data,parameters.slice(1));
+                        } else {
+                            console.warn(`Function ${functionName} not found for expression: ${change}`);
+                            value = selectorOpen + change + selectorClose; // Return original placeholder
+                        }
                     }
                     else if (change.indexOf('##@') === 0 && change.indexOf('|') > 0) {
                         let parameters = change.split('|');
-                        value = this.functions[parameters[0].substr(3)](otherData,data,parameters.slice(1));
+                        let functionName = parameters[0].substr(3);
+                        if (this.functions[functionName]) {
+                            value = this.functions[functionName](otherData,data,parameters.slice(1));
+                        } else {
+                            console.warn(`Function ${functionName} not found for expression: ${change}`);
+                            value = selectorOpen + change + selectorClose; // Return original placeholder
+                        }
                     }
                     else {
                         value = this.parserWithFunction(data, change);
@@ -218,6 +288,9 @@ export class TsTemplater  {
 
                 if (value === undefined || value === null) {
                     value = '';
+                } else if (typeof value !== 'string') {
+                    // Convert non-string values to string for template parsing
+                    value = String(value);
                 }
 
                 let replaceString = selectorOpen+x+selectorClose;
@@ -274,8 +347,107 @@ export class TsTemplater  {
         return result;
     }
 
-    private fromContext(data: any, key: string): any {
+    private fromContext(data: any, key: string, currentPath: string = '', cacheKey: string = ''): any {
+        if (!data) return null;
 
+        // Se la cache è disabilitata, esegui direttamente senza cache
+        if (this.cache === undefined) {
+            return this.fromContextWithoutCache(data, key);
+        }
+
+        // Costruisce una chiave di cache unica che include l'identità dell'oggetto dati
+        // Questo evita problemi quando si processano elementi diversi di un array
+        const dataId = this.getDataIdentity(data);
+        const fullCacheKey = cacheKey || `${dataId}:${currentPath ? `${currentPath}.${key}` : key}`;
+        
+        // Controlla se il risultato è già in cache
+        if (this.cache[fullCacheKey] !== undefined) {
+            return this.cache[fullCacheKey];
+        }
+
+        let prefix = key;
+        let dotIndex = key.indexOf('.');
+        let arrayIndexStart = key.indexOf('[');
+        let arrayIndexEnd = key.indexOf(']');
+
+        if (dotIndex >= 0) {
+            prefix = key.substr(0, dotIndex);
+        } else if (arrayIndexStart >= 0 && arrayIndexEnd > 0) {
+            prefix = key.substr(0, arrayIndexStart);
+        }
+
+        let result = null;
+        let prefixPath = currentPath ? `${currentPath}.${prefix}` : prefix;
+        let prefixCacheKey = `${dataId}:${prefixPath}`;
+
+        if (arrayIndexStart > 0 && arrayIndexStart < dotIndex) {
+            // Risolve ricorsivamente il prefixo con cache
+            result = this.fromContext(data, prefix, currentPath, prefixCacheKey);
+        } else {
+            // Controlla se il prefisso è già in cache
+            if (this.cache[prefixCacheKey] !== undefined) {
+                result = this.cache[prefixCacheKey];
+            } else {
+                result = data[prefix];
+                // Salva il risultato del prefisso in cache
+                this.cache[prefixCacheKey] = result;
+            }
+        }
+
+        if (dotIndex >= 0 && result) {
+            // Continua ricorsivamente con il resto della chiave
+            const remainingKey = key.substr(dotIndex + 1);
+            const newDataId = this.getDataIdentity(result);
+            const remainingCacheKey = `${newDataId}:${remainingKey}`;
+            result = this.fromContext(result, remainingKey, prefixPath, remainingCacheKey);
+        } else if (arrayIndexStart >= 0 && arrayIndexEnd > 0 && result) {
+            if (Array.isArray(result)) {
+                let lenght = arrayIndexEnd - arrayIndexStart;
+                let position = key.substr(arrayIndexStart + 1, lenght - 1);
+                let arrayResult = null;
+
+                if(position.indexOf(',')>=0){
+                    let filters = position.split(',');  // Use commas also to access fields inside the object, so the first element is the value, while all the rest are field names
+                    arrayResult = this.arrayFirstByField(result,filters[0],filters.slice(1));
+                } else{
+                    switch (position) {
+                        case 'first': {
+                            arrayResult = result[0];
+                        }
+                        break;
+                    case 'last': {
+                        arrayResult = result[result.length - 1];
+                    }
+                    break;
+                    default: {
+                        let index = +position;
+                        if (index >= 0) {
+                            arrayResult = result[index];
+                        } else {
+                            arrayResult = null;
+                        }
+                    }
+                    break;
+                    }
+                }
+
+                // Salva il risultato dell'accesso all'array in cache
+                const arrayAccessPath = `${prefixPath}[${position}]`;
+                const arrayAccessCacheKey = `${dataId}:${arrayAccessPath}`;
+                this.cache[arrayAccessCacheKey] = arrayResult;
+                result = arrayResult;
+
+            } else {
+                result = null;
+            }
+        }
+
+        // Salva il risultato finale in cache
+        this.cache[fullCacheKey] = result;
+        return result;
+    }
+
+    private fromContextWithoutCache(data: any, key: string): any {
         if (!data) return null;
         let prefix = key;
         let dotIndex = key.indexOf('.');
@@ -290,12 +462,12 @@ export class TsTemplater  {
 
         let result = null;
         if (arrayIndexStart > 0 && arrayIndexStart < dotIndex) {
-            result = this.fromContext(data, prefix);
+            result = this.fromContextWithoutCache(data, prefix);
         } else {
             result = data[prefix];
         }
         if (dotIndex >= 0 && result) {
-            result = this.fromContext(result, key.substr(dotIndex + 1));
+            result = this.fromContextWithoutCache(result, key.substr(dotIndex + 1));
         } else if (arrayIndexStart >= 0 && arrayIndexEnd > 0 && result) {
             if (Array.isArray(result)) {
                 let lenght = arrayIndexEnd - arrayIndexStart;
@@ -330,6 +502,44 @@ export class TsTemplater  {
             }
         }
         return result;
+    }
+
+    private getDataIdentity(data: any): string {
+        if (data === null || data === undefined) {
+            return 'null';
+        }
+        if (typeof data === 'object') {
+            // Per oggetti, creiamo un ID unico basato sulle proprietà principali
+            // Questo approccio funziona meglio per oggetti simili ma distinti
+            if (Array.isArray(data)) {
+                return `array_${data.length}_${JSON.stringify(data[0] || null)}`;
+            } else {
+                // Per oggetti, utilizziamo una combinazione di alcune proprietà chiave
+                try {
+                    const keys = Object.keys(data).slice(0, 3).sort();
+                    const keyValues = keys.map(k => {
+                        const value = data[k];
+                        // Gestisci i tipi non serializzabili
+                        if (typeof value === 'symbol') {
+                            return `${k}:symbol`;
+                        } else if (typeof value === 'function') {
+                            return `${k}:function`;
+                        } else if (typeof value === 'bigint') {
+                            return `${k}:bigint_${value.toString()}`;
+                        } else if (typeof value === 'object' && value !== null) {
+                            return `${k}:object`;
+                        } else {
+                            return `${k}:${value}`;
+                        }
+                    }).join('|');
+                    return `object_${keyValues}`;
+                } catch (error) {
+                    // Fallback per oggetti che non possono essere elaborati
+                    return `object_unprocessable_${Date.now()}`;
+                }
+            }
+        }
+        return `primitive_${typeof data}_${data}`;
     }
 
 //#region Functions

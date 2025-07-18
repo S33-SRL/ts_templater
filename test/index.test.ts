@@ -179,17 +179,17 @@ describe('TsTemplater', () => {
 
   it('number format 3' ,() => {
     const result = tmpEngine.parse('{@Number|012}', objExample);
-    expect(result).toBe(12);
+    expect(result).toBe('12');
   });
 
   it('number format 4' ,() => {
     const result = tmpEngine.parse('{@Number|23.342}', objExample);
-    expect(result).toBe(23.342);
+    expect(result).toBe('23.342');
   });
 
   it('number format 5' ,() => {
     const result = tmpEngine.parse('{@Number|{leadTime}}', objExample);
-    expect(result).toBe(234.56);
+    expect(result).toBe('234.56');
   });
 
   it('Currency format 1' ,() => {
@@ -222,32 +222,32 @@ describe('TsTemplater', () => {
 
   it('Sum 1',() => {
     const result = tmpEngine.parse('{@Sum|1|2}', objExample);
-    expect(result).toBe(3);
+    expect(result).toBe('3');
   })
 
   it('Sum 2',() => {
     const result = tmpEngine.parse('{@Sum|{packageQuantity}|2}', objExample);
-    expect(result).toBe(objExample.packageQuantity+2);
+    expect(result).toBe((objExample.packageQuantity+2).toString());
   })
 
   it('Sum 3',() => {
     const result = tmpEngine.parse('{@Sum|{packageQuantity}|{leadTime}}', objExample);
-    expect(result).toBe(objExample.packageQuantity+objExample.leadTime);
+    expect(result).toBe((objExample.packageQuantity+objExample.leadTime).toString());
   })
 
   it('Math function 1',() => {
     const result = tmpEngine.parse('{@Math|*|3|2}', objExample);
-    expect(result).toBe(6);
+    expect(result).toBe('6');
   });
 
   it('Math function 2',() => {
     const result = tmpEngine.parse('{@Math|/|{packageQuantity}|2}', objExample);
-    expect(result).toBe(objExample.packageQuantity/2);
+    expect(result).toBe((objExample.packageQuantity/2).toString());
   });
 
   it('Math function 3',() => {
     const result = tmpEngine.parse('{@Math|%|{leadTime}|{packageQuantity}}', objExample);
-    expect(result).toBe(objExample.leadTime%objExample.packageQuantity);
+    expect(result).toBe((objExample.leadTime%objExample.packageQuantity).toString());
   });
 
   it('IsNull 1 - with null value',() => {

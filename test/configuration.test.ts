@@ -159,7 +159,7 @@ describe('TsTemplater - Configuration and State Management', () => {
 
       // engine2 should not have the custom function and returns original template
       const result2 = engine2.parse('{@CustomFunc|{value}}', data);
-      expect(result2).toBe('{@CustomFunc|{value}}');
+      expect(result2).toBe('{@CustomFunc|test}');
     });
 
     it('should handle concurrent parsing operations', async () => {

@@ -9,7 +9,7 @@
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-00D26A?style=for-the-badge&logo=opensourceinitiative&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-115%2F115-00C851?style=for-the-badge&logo=jest&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-135%2F135-00C851?style=for-the-badge&logo=jest&logoColor=white)
 ![Coverage](https://img.shields.io/badge/coverage-100%25-4CAF50?style=for-the-badge&logo=codecov&logoColor=white)
 
 </div>
@@ -375,11 +375,24 @@ templater.setFunctions({
 
 <div align="center">
 
+## 📚 **Documentation**
+
+</div>
+
+For detailed documentation on specific features:
+
+- **📋 [Custom Functions Guide](./CUSTOM_FUNCTIONS.md)** - Complete guide for using `setFunctions()` to extend TsTemplater with custom logic
+- **⚡ [Cache System](./CACHE.md)** - Detailed documentation of the intelligent caching system for performance optimization
+
+---
+
+<div align="center">
+
 ## 🧪 **Testing Excellence**
 
 <div style="font-size: 4em; margin: 20px 0;">🎯</div>
 
-**115/115** tests passing with **100%** coverage
+**135/135** tests passing with **100%** coverage
 
 ✅ All core functions  
 ✅ Edge cases and error handling  

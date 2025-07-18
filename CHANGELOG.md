@@ -7,6 +7,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2025-07-18
+
+### Added ⭐
+- **🔧 Custom Functions System**: New `setFunctions()` method allows injecting custom business logic
+  - Support for all function syntaxes: `@`, `!@`, `#@`, `##@`
+  - Ability to override built-in functions with custom implementations
+  - Context-aware functions with access to data objects
+  - Array processing functions for complex data manipulation
+- **⚡ Intelligent Cache System**: Progressive caching for object navigation performance
+  - Object identity-based caching to prevent cross-contamination
+  - Configurable cache with constructor parameter `enableCache` (default: true)
+  - Complete cache management API: `cleanCache()`, `isCacheEnabled()`, `getCacheSize()`, `getCacheKeys()`, `disableCache()`, `enableCache()`
+  - Automatic fallback for disabled cache scenarios
+- **📚 Comprehensive Documentation**: 
+  - `CUSTOM_FUNCTIONS.md` - Complete guide for custom function development
+  - `CACHE.md` - Detailed cache system documentation
+  - Practical examples with real-world business scenarios
+
+### Enhanced 🔄
+- **Error Handling**: Robust error management for missing or malformed custom functions
+  - Missing functions return original placeholder with warning
+  - Graceful handling of runtime errors in custom functions
+  - Improved debugging with informative console warnings
+- **Performance**: Optimized object navigation with intelligent progressive caching
+  - Significant performance improvements for complex nested object access
+  - Memory-efficient cache implementation with object identity tracking
+- **API Expansion**: Extended functionality while maintaining full backward compatibility
+  - Constructor now accepts `enableCache` parameter: `new TsTemplater(lang, enableCache)`
+  - New `evaluate()` method preserves original data types (vs `parse()` string output)
+
+### Examples 🎯
+- **Business Functions**: Pre-built examples for common business scenarios
+  - Customer discount calculations
+  - Phone number formatting (Italian style)
+  - Time-based greetings
+  - Star rating displays
+  - Order status with emoji indicators
+- **Real-world Templates**: Email templates, dashboard views, and dynamic reports
+- **Performance Demos**: Cache system examples showing navigation optimization
+
+### Technical Improvements 🔧
+- ✅ Expanded test suite from 115 to **135 tests** (100% pass rate)
+- ✅ New test categories: `setFunctions.test.ts`, `cache.test.ts`
+- ✅ Comprehensive error handling and edge case testing
+- ✅ Performance and memory usage validation
+- ✅ Multi-instance isolation testing
+- ✅ Cache system stress testing with large datasets
+
+### Fixed 🐛
+- **Template Parsing**: Improved function call recognition and parameter processing
+- **Type Conversion**: Enhanced string conversion in `parse()` method for consistent output
+- **Cache Conflicts**: Resolved array processing conflicts with object identity system
+- **Function Registration**: Better handling of function parameter validation
+
 ## [0.2.1] - 2025-07-18
 
 ### Security 🔒
