@@ -144,6 +144,58 @@ describe('TsTemplater - Edge Cases and Error Handling', () => {
     });
   });
 
+  describe('Split function edge cases', () => {
+    const objExample = { data: 'test' };
+
+    it('should handle empty string input', () => {
+      const result = tmpEngine.evaluate('#@Split||;', objExample);
+      expect(Array.isArray(result)).toBe(true);
+      expect(result).toHaveLength(0);
+    });
+
+    it('should handle missing delimiter parameter', () => {
+      const result = tmpEngine.evaluate('#@Split|some data', objExample);
+      expect(Array.isArray(result)).toBe(true);
+      expect(result).toHaveLength(0);
+    });
+
+    it('should handle empty JSON parts', () => {
+      const jsonList = '{"code":"1","desc":"primo"};;{"code":"2","desc":"secondo"}';
+      const result = tmpEngine.evaluate(`#@Split|${jsonList}|;`, objExample);
+      expect(Array.isArray(result)).toBe(true);
+      expect(result).toHaveLength(2); // Should skip empty part
+      expect(result[0]).toEqual({"code":"1","desc":"primo"});
+      expect(result[1]).toEqual({"code":"2","desc":"secondo"});
+    });
+
+    it('should handle JSON with special characters', () => {
+      // Use a different delimiter when JSON contains semicolons
+      const jsonList = '{"code":"1","desc":"primo; con punto e virgola"}###{"code":"2","desc":"secondo"}';
+      const result = tmpEngine.evaluate(`#@Split|${jsonList}|###`, objExample);
+      expect(Array.isArray(result)).toBe(true);
+      expect(result).toHaveLength(2);
+      expect(result[0].desc).toBe('primo; con punto e virgola');
+    });
+
+    it('should handle invalid JSON gracefully', () => {
+      const jsonList = '{"code":"1","name":"valid"};invalid-json;{"code":"2","name":"also valid"}';
+      const result = tmpEngine.evaluate(`#@Split|${jsonList}|;`, objExample);
+      expect(Array.isArray(result)).toBe(true);
+      expect(result).toHaveLength(2); // Should skip invalid JSON
+      expect(result[0].name).toBe('valid');
+      expect(result[1].name).toBe('also valid');
+    });
+
+    it('should handle different delimiters', () => {
+      const jsonList = '{"id":1,"name":"first"}###{"id":2,"name":"second"}';
+      const result = tmpEngine.evaluate(`#@Split|${jsonList}|###`, objExample);
+      expect(Array.isArray(result)).toBe(true);
+      expect(result).toHaveLength(2);
+      expect(result[0].name).toBe('first');
+      expect(result[1].name).toBe('second');
+    });
+  });
+
   describe('Currency function edge cases', () => {
     const objExample = { price: 123.45 };
 

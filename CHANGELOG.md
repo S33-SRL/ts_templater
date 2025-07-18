@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added ⭐
+- **NEW**: `Split` function for JSON string array parsing (`{#@Split|jsonString|delimiter}`)
+- Enhanced README with modern visual design including:
+  - Animated typing SVG header
+  - Gradient backgrounds and colored badges
+  - Interactive collapsible sections (Property Access, Array Search, Advanced Examples)
+  - Professional two-column layout for Functions Showcase
+  - Visual emoji indicators and improved typography
+  - Comprehensive examples with real-world use cases (Email templates, Dynamic reports)
+
+### Changed 🔄
+- **Documentation**: Complete README modernization with visual enhancements
+- **Examples**: Updated all code examples with emoji-enhanced data for better visual appeal
+- **Structure**: Improved README organization with better sectioning and navigation
+- **Styling**: Enhanced badge styling with `for-the-badge` format and custom colors
+- **Content**: Added comprehensive advanced examples showing real-world usage patterns
+
+### Fixed 🐛
+- **README**: Resolved formatting issues and broken HTML structure
+- **Code Display**: Fixed centered code alignment for better readability
+- **Visual**: Corrected corrupted emoji characters in documentation
+- **Structure**: Fixed duplicated sections and malformed markup
+
+### Technical Improvements 🔧
+- Enhanced testing coverage to 115/115 tests (100% pass rate)
+- Improved Split function implementation with robust JSON parsing
+- Better error handling for malformed JSON strings in Split function
+- Comprehensive test cases for Split function with various delimiters
+
+## [Previous Releases]
+
 ### Added
 - New `evaluate()` method for type-preserving expression evaluation
 - Enhanced function system with comprehensive data type support  

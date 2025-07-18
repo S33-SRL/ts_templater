@@ -39,7 +39,7 @@ export class TsTemplater  {
         this.functions["Contains"] = this.intContains
         this.functions["PadStart"] = this.intPadStart;
         this.functions["PadEnd"] = this.intPadEnd;
-        //this.functions["ToList"] = this.intCurrency; // TODO
+        this.functions["Split"] = this.intSplit;
         this.functions["ArrayConcat"] = this.intArrayConcat;
         this.functions["ArraySum"] = this.intArraySum;
         this.functions["Json"] = this.intJson;
@@ -537,6 +537,48 @@ export class TsTemplater  {
         if (!params || params.length < 2) return null;
         let value: string = params[0].toString();
         return value.padEnd(params[1], params[2]);
+    }
+
+    // intSplit function that splits a string by delimiter and parses each part as JSON
+    // Syntax: {@Split|jsonString|delimiter}
+    // Example: {@Split|{"code":"1","desc":"primo"};{"code":"2","desc":"secondo"}|;}
+    // Returns: [{"code":"1","desc":"primo"}, {"code":"2","desc":"secondo"}]
+    private intSplit = (data: any, params: any[]) => {
+        if (!params || params.length < 2) return [];
+        
+        try {
+            const stringToSplit = params[0];
+            const delimiter = params[1];
+            
+            // Check if stringToSplit is valid
+            if (!stringToSplit || typeof stringToSplit !== 'string') {
+                return [];
+            }
+            
+            // Split the string by delimiter
+            const parts = stringToSplit.split(delimiter);
+            const result = [];
+            
+            // Parse each part as JSON and add to result array
+            for (const part of parts) {
+                const trimmed = part.trim();
+                if (!trimmed) continue; // Skip empty parts
+                
+                try {
+                    const parsed = JSON.parse(trimmed);
+                    result.push(parsed);
+                } catch (parseError) {
+                    // Skip invalid JSON parts or add as string?
+                    console.warn(`Skipping invalid JSON part: "${trimmed}"`);
+                    continue;
+                }
+            }
+            
+            return result;
+        } catch (error) {
+            console.error("intSplit error:", error);
+            return [];
+        }
     }
 
     // intJson function that if param[0] is 'Parse' parses a JSON string and returns the corresponding object, 

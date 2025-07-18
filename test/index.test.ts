@@ -359,6 +359,33 @@ describe('TsTemplater', () => {
     expect(result).toContain('"nr"');
   });
 
+  it('Split 1 - basic split test',() => {
+    // Test che la funzione splitta correttamente una stringa di JSON
+    const jsonList = '{"code":"1","description":"primo"};{"code":"2","description":"secondo"}';
+    const result = tmpEngine.evaluate(`#@Split|${jsonList}|;`, objExample);
+    
+    // Verifica che il risultato sia un array
+    expect(Array.isArray(result)).toBe(true);
+    expect(result).toHaveLength(2);
+    expect(result[0]).toEqual({"code":"1","description":"primo"});
+    expect(result[1]).toEqual({"code":"2","description":"secondo"});
+  });
+
+  it('Split 2 - composite test with array syntax',() => {
+    // Test composito: prima splittiamo, poi usiamo la sintassi array [field,value]
+    const data = {
+      jsonString: '{"code":"1","name":"Alpha"};{"code":"2","name":"Beta"};{"code":"3","name":"Gamma"}',
+      splitData: null as any
+    };
+    
+    // Prima splittiamo i dati e li mettiamo in splitData usando evaluate
+    data.splitData = tmpEngine.evaluate(`#@Split|${data.jsonString}|;`, data);
+    
+    // Ora usiamo la sintassi array esistente per trovare l'elemento con code="2"
+    const result = tmpEngine.parse('{splitData[2,code].name}', data);
+    expect(result).toBe('Beta');
+  });
+
   // Test the new evaluate() method that preserves types
   it('Evaluate method - preserves number type',() => {
     const result = tmpEngine.evaluate('packageQuantity', objExample);
