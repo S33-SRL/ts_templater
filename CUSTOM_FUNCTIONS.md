@@ -1,405 +1,438 @@
-# Custom Functions - setFunctions Method
+# Custom Functions Documentation
 
-Il metodo `setFunctions` di TsTemplater permette di iniettare funzioni personalizzate per estendere le capacità della libreria, rendendola estremamente flessibile e adattabile a qualsiasi esigenza di business.
+TsTemplater allows you to inject custom functions to extend the library's capabilities with specific business logic. This makes the library extremely flexible and adaptable to any business need.
 
-## Sintassi Base
+## Basic Usage
 
-```typescript
-templater.setFunctions(functionObject);
-```
-
-Dove `functionObject` è un oggetto contenente le funzioni personalizzate:
+### Adding Custom Functions
 
 ```typescript
+import { TsTemplater } from 'ts-templater';
+
+const templater = new TsTemplater();
+
+// Define your custom functions
 const customFunctions = {
-    'FunctionName': (params: any[]) => {
-        // Logica della funzione
-        return result;
-    }
-};
-```
-
-## Tipi di Funzioni Personalizzate
-
-### 1. Funzioni Simple (@)
-Funzioni che operano solo sui parametri passati, senza accesso al contesto dati.
-
-```typescript
-const simpleFunctions = {
-    'StringLength': (params: any[]) => {
-        if (!params || params.length !== 1) return null;
-        return params[0] ? params[0].toString().length : 0;
+    // Simple function without parameters
+    CompanyName: () => 'My Company Ltd.',
+    
+    // Function with parameters
+    Discount: (params) => {
+        const price = parseFloat(params[0] || 0);
+        const percentage = parseFloat(params[1] || 0);
+        return price * (percentage / 100);
     },
     
-    'ToUpper': (params: any[]) => {
-        if (!params || params.length !== 1) return null;
-        return params[0] ? params[0].toString().toUpperCase() : '';
-    },
-    
-    'Square': (params: any[]) => {
-        if (!params || params.length !== 1) return null;
-        const num = Number(params[0]);
-        return isNaN(num) ? null : num * num;
-    }
-};
-
-templater.setFunctions(simpleFunctions);
-
-// Utilizzo nei template
-const data = { name: 'giovanni', age: 5 };
-templater.parse('{@StringLength|{name}}', data);  // "8"
-templater.parse('{@ToUpper|{name}}', data);       // "GIOVANNI"
-templater.parse('{@Square|{age}}', data);         // "25"
-```
-
-### 2. Funzioni con Contesto (!@)
-Funzioni che hanno accesso ai dati del contesto principale.
-
-```typescript
-const contextFunctions = {
-    'GetUserInfo': (data: any, params: any[]) => {
-        if (!params || params.length !== 1) return null;
-        const field = params[0];
-        if (field === 'fullName') {
-            return `${data.firstName} ${data.lastName}`;
-        } else if (field === 'initials') {
-            return `${data.firstName[0]}${data.lastName[0]}`;
-        }
-        return data[field] || '';
-    },
-    
-    'CalculateDiscount': (data: any, params: any[]) => {
-        const customerType = data.customerType;
-        const amount = Number(params[0]) || 0;
+    // Context-aware function (has access to data)
+    CustomerDiscount: (data, params) => {
+        const basePrice = parseFloat(params[0] || 0);
+        const customerType = data.customer?.type || 'standard';
         
-        let discountRate = 0;
-        switch (customerType) {
-            case 'premium': discountRate = 0.15; break;
-            case 'gold': discountRate = 0.10; break;
-            case 'silver': discountRate = 0.05; break;
-            default: discountRate = 0;
-        }
-        
-        return (amount * discountRate).toFixed(2);
-    }
-};
-
-templater.setFunctions(contextFunctions);
-
-// Utilizzo nei template
-const userData = {
-    firstName: 'Mario',
-    lastName: 'Rossi',
-    customerType: 'premium',
-    orderAmount: 100
-};
-
-templater.parse('{!@GetUserInfo|fullName}', userData);        // "Mario Rossi"
-templater.parse('{!@GetUserInfo|initials}', userData);       // "MR"
-templater.parse('{!@CalculateDiscount|{orderAmount}}', userData); // "15.00"
-```
-
-### 3. Funzioni per Array (#@)
-Funzioni che operano su array e hanno accesso al contesto dati.
-
-```typescript
-const arrayFunctions = {
-    'FilterArray': (data: any, params: any[]) => {
-        if (!params || params.length < 2) return '';
-        const arrayName = params[0];
-        const template = params.slice(1).join('|');
-        const array = data[arrayName];
-        
-        if (!Array.isArray(array)) return '';
-        
-        const filtered = array.filter(item => {
-            const result = templater.parse(template, item);
-            return result && result !== '' && result !== '0' && result !== 'false';
-        });
-        
-        return filtered.map(item => templater.parse('{name}', item)).join(', ');
-    },
-    
-    'MaxValue': (data: any, params: any[]) => {
-        if (!params || params.length !== 2) return null;
-        const arrayName = params[0];
-        const fieldTemplate = params[1];
-        const array = data[arrayName];
-        
-        if (!Array.isArray(array) || array.length === 0) return null;
-        
-        const values = array.map(item => {
-            const result = templater.parse(fieldTemplate, item);
-            return Number(result) || 0;
-        });
-        
-        return Math.max(...values);
-    }
-};
-
-templater.setFunctions(arrayFunctions);
-
-// Utilizzo nei template
-const productsData = {
-    products: [
-        { name: 'Laptop', price: 1000, active: true },
-        { name: 'Mouse', price: 25, active: false },
-        { name: 'Keyboard', price: 75, active: true }
-    ]
-};
-
-templater.parse('{#@FilterArray|products|{active}}', productsData);  // "Laptop, Keyboard"
-templater.parse('{#@MaxValue|products|{price}}', productsData);      // "1000"
-```
-
-## Esempi Pratici di Business Logic
-
-### Gestione Clienti e Ordini
-
-```typescript
-const businessFunctions = {
-    // Formattazione telefono
-    'FormatPhone': (params: any[]) => {
-        if (!params || params.length !== 1) return '';
-        const phone = params[0].toString().replace(/\D/g, '');
-        if (phone.length === 10) {
-            return `(${phone.slice(0,3)}) ${phone.slice(3,6)}-${phone.slice(6)}`;
-        }
-        return phone;
-    },
-    
-    // Calcolo età
-    'CalculateAge': (params: any[]) => {
-        if (!params || params.length !== 1) return '';
-        const birthDate = new Date(params[0]);
-        const today = new Date();
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const monthDiff = today.getMonth() - birthDate.getMonth();
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-            age--;
-        }
-        return age.toString();
-    },
-    
-    // Status ordine con colore
-    'OrderStatus': (data: any, params: any[]) => {
-        const status = data.status;
-        const template = params[0] || '{status}';
-        
-        const statusConfig = {
-            'pending': { color: 'orange', text: 'In Attesa' },
-            'processing': { color: 'blue', text: 'In Elaborazione' },
-            'shipped': { color: 'green', text: 'Spedito' },
-            'delivered': { color: 'darkgreen', text: 'Consegnato' },
-            'cancelled': { color: 'red', text: 'Annullato' }
+        const discounts = {
+            'premium': 0.20,
+            'gold': 0.15,
+            'standard': 0.05
         };
         
-        const config = statusConfig[status] || { color: 'gray', text: status };
-        
-        if (template === 'color') return config.color;
-        if (template === 'text') return config.text;
-        return `<span style="color: ${config.color}">${config.text}</span>`;
+        const discount = discounts[customerType] || 0;
+        return basePrice * (1 - discount);
     }
 };
 
-templater.setFunctions(businessFunctions);
-
-// Utilizzo
-const customerData = {
-    phone: '1234567890',
-    birthDate: '1990-05-15',
-    status: 'shipped'
-};
-
-templater.parse('Tel: {@FormatPhone|{phone}}', customerData);           // "Tel: (123) 456-7890"
-templater.parse('Età: {@CalculateAge|{birthDate}} anni', customerData); // "Età: 34 anni"
-templater.parse('{!@OrderStatus}', customerData);                      // "<span style="color: green">Spedito</span>"
-templater.parse('{!@OrderStatus|color}', customerData);                // "green"
+// Inject the functions
+templater.setFunctions(customFunctions);
 ```
 
-### Template Email Dinamico
+### Using Custom Functions in Templates
 
 ```typescript
-const emailFunctions = {
-    'PersonalizedGreeting': (data: any, params: any[]) => {
+const data = {
+    customer: { type: 'premium', name: 'John Doe' },
+    product: { price: 100 }
+};
+
+// Using different function syntaxes
+const templates = [
+    'Welcome to {@CompanyName}!',                           // → 'Welcome to My Company Ltd.!'
+    'Discount: {@Discount|100|10}',                        // → 'Discount: 10'
+    'Final price: {!@CustomerDiscount|100}',               // → 'Final price: 80'
+    'Formatted: {#@CustomerDiscount|100}',                 // → 'Formatted: 80.00'
+    'Currency: {##@CustomerDiscount|100}'                  // → 'Currency: $80.00'
+];
+
+templates.forEach(template => {
+    console.log(templater.parse(template, data));
+});
+```
+
+## Function Types and Syntax
+
+### 1. Simple Functions (`@`)
+```typescript
+{@FunctionName|param1|param2}
+```
+- Basic function call
+- Returns the raw result
+- Used for simple transformations
+
+### 2. Null-Safe Functions (`!@`)
+```typescript
+{!@FunctionName|param1|param2}
+```
+- Returns empty string if result is null/undefined
+- Useful for optional values
+
+### 3. Formatted Functions (`#@`)
+```typescript
+{#@FunctionName|param1|param2}
+```
+- Formats numbers with 2 decimal places
+- Returns "0.00" for null/undefined
+
+### 4. Currency Functions (`##@`)
+```typescript
+{##@FunctionName|param1|param2}
+```
+- Formats as currency with symbol
+- Returns "$0.00" for null/undefined
+
+## Practical Examples
+
+### 1. Phone Number Formatting
+```typescript
+const functions = {
+    PhoneIT: (params) => {
+        const phone = params[0]?.toString() || '';
+        const cleaned = phone.replace(/\D/g, '');
+        
+        if (cleaned.length === 10) {
+            return `${cleaned.slice(0,3)} ${cleaned.slice(3,6)} ${cleaned.slice(6)}`;
+        }
+        return phone; // Return original if invalid
+    }
+};
+
+templater.setFunctions(functions);
+
+const template = 'Contact: {@PhoneIT|3201234567}';
+// Result: 'Contact: 320 123 4567'
+```
+
+### 2. Time-Based Greetings
+```typescript
+const functions = {
+    GreetingTime: () => {
         const hour = new Date().getHours();
-        const name = data.firstName || 'Cliente';
-        
-        let greeting;
-        if (hour < 12) greeting = 'Buongiorno';
-        else if (hour < 18) greeting = 'Buon pomeriggio';
-        else greeting = 'Buonasera';
-        
-        return `${greeting} ${name}`;
-    },
-    
-    'ProductRecommendations': (data: any, params: any[]) => {
-        const category = data.preferredCategory;
-        const budget = Number(data.budget) || 0;
-        
-        const recommendations = {
-            'electronics': [
-                { name: 'Smartphone', price: 299 },
-                { name: 'Tablet', price: 199 },
-                { name: 'Smartwatch', price: 149 }
-            ],
-            'clothing': [
-                { name: 'Maglietta Premium', price: 29 },
-                { name: 'Jeans Designer', price: 89 },
-                { name: 'Scarpe Casual', price: 79 }
-            ]
-        };
-        
-        const products = recommendations[category] || [];
-        const affordable = products.filter(p => p.price <= budget);
-        
-        if (affordable.length === 0) return 'Nessun prodotto trovato nel tuo budget.';
-        
-        return affordable.map(p => `• ${p.name} (€${p.price})`).join('\n');
+        if (hour < 12) return 'Good morning';
+        if (hour < 18) return 'Good afternoon';
+        return 'Good evening';
     }
 };
 
-templater.setFunctions(emailFunctions);
+const template = '{@GreetingTime}, {customer.name}!';
+// Result: 'Good morning, John!' (depending on the time)
+```
 
-// Template email
-const emailTemplate = `
-{!@PersonalizedGreeting}!
-
-Abbiamo selezionato questi prodotti per te:
-
-{!@ProductRecommendations}
-
-Cordiali saluti,
-Il Team
-`;
-
-const customerData = {
-    firstName: 'Marco',
-    preferredCategory: 'electronics',
-    budget: 200
+### 3. Rating Display
+```typescript
+const functions = {
+    StarRating: (params) => {
+        const rating = parseInt(params[0] || 0);
+        const maxStars = parseInt(params[1] || 5);
+        return '★'.repeat(rating) + '☆'.repeat(maxStars - rating);
+    }
 };
 
-const email = templater.parse(emailTemplate, customerData);
-// Risultato:
-// Buongiorno Marco!
-// 
-// Abbiamo selezionato questi prodotti per te:
-// 
-// • Tablet (€199)
-// • Smartwatch (€149)
-// 
-// Cordiali saluti,
-// Il Team
+const template = 'Rating: {@StarRating|4|5}';
+// Result: 'Rating: ★★★★☆'
+```
+
+### 4. Array Processing Functions
+```typescript
+const functions = {
+    JoinArray: (data, params) => {
+        const arrayPath = params[0] || '';
+        const separator = params[1] || ', ';
+        
+        // Navigate to the array in the data
+        const parts = arrayPath.split('.');
+        let current = data;
+        for (const part of parts) {
+            current = current?.[part];
+        }
+        
+        if (Array.isArray(current)) {
+            return current.join(separator);
+        }
+        return '';
+    }
+};
+
+const data = {
+    order: {
+        items: ['Laptop', 'Mouse', 'Keyboard']
+    }
+};
+
+const template = 'Items: {@JoinArray|order.items| - }';
+// Result: 'Items: Laptop - Mouse - Keyboard'
+```
+
+## Error Handling
+
+### Missing Functions
+If a function is not found, TsTemplater returns the original placeholder and logs a warning:
+
+```typescript
+const template = '{@NonExistentFunction|param}';
+const result = templater.parse(template, {});
+// Result: '{@NonExistentFunction|param}'
+// Console: Warning: Function 'NonExistentFunction' not found
+```
+
+### Runtime Errors
+If a function throws an error during execution, TsTemplater handles it gracefully:
+
+```typescript
+const functions = {
+    ProblematicFunction: () => {
+        throw new Error('Something went wrong');
+    }
+};
+
+templater.setFunctions(functions);
+
+const template = '{@ProblematicFunction}';
+const result = templater.parse(template, {});
+// Result: '{@ProblematicFunction}'
+// Console: Error executing function 'ProblematicFunction': Something went wrong
+```
+
+## Advanced Patterns
+
+### 1. Conditional Business Logic
+```typescript
+const functions = {
+    OrderStatus: (data, params) => {
+        const order = data.order || {};
+        const status = order.status || 'unknown';
+        
+        const statusMap = {
+            'pending': '⏳ Pending',
+            'processing': '🔄 Processing', 
+            'shipped': '📦 Shipped',
+            'delivered': '✅ Delivered',
+            'cancelled': '❌ Cancelled'
+        };
+        
+        return statusMap[status] || '❓ Unknown';
+    }
+};
+
+const template = 'Status: {@OrderStatus}';
+```
+
+### 2. Dynamic Calculations
+```typescript
+const functions = {
+    TaxCalculation: (data, params) => {
+        const amount = parseFloat(params[0] || 0);
+        const country = data.customer?.country || 'US';
+        
+        const taxRates = {
+            'US': 0.08,
+            'IT': 0.22,
+            'DE': 0.19,
+            'FR': 0.20
+        };
+        
+        const rate = taxRates[country] || 0;
+        return amount * rate;
+    }
+};
+
+const template = 'Tax: {##@TaxCalculation|100}'; // Formatted as currency
+```
+
+### 3. Text Processing
+```typescript
+const functions = {
+    Capitalize: (params) => {
+        const text = params[0] || '';
+        return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+    },
+    
+    Truncate: (params) => {
+        const text = params[0] || '';
+        const maxLength = parseInt(params[1] || 50);
+        return text.length > maxLength ? text.slice(0, maxLength) + '...' : text;
+    }
+};
+
+const template = 'Title: {@Capitalize|{@Truncate|{product.description}|30}}';
+```
+
+## Overriding Built-in Functions
+
+You can override any built-in function with your custom implementation:
+
+```typescript
+const functions = {
+    // Override the built-in Date function
+    Date: (params) => {
+        const date = new Date(params[0] || Date.now());
+        return date.toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+    }
+};
+
+templater.setFunctions(functions);
+
+const template = '{@Date|2024-12-25}';
+// Result: 'Wednesday, December 25, 2024' (instead of default format)
 ```
 
 ## Best Practices
 
-### 1. Gestione Errori
+### 1. Function Naming
+- Use **PascalCase** for function names
+- Choose **descriptive names** that clearly indicate the function's purpose
+- Avoid names that conflict with JavaScript reserved words
+
+### 2. Parameter Handling
 ```typescript
-const safeFunctions = {
-    'SafeDivision': (params: any[]) => {
+const functions = {
+    SafeFunction: (params) => {
+        // Always provide defaults for parameters
+        const value = params[0] || '';
+        const defaultVal = params[1] || 'N/A';
+        
+        // Validate input types
+        if (typeof value !== 'string') {
+            return defaultVal;
+        }
+        
+        return value.toUpperCase();
+    }
+};
+```
+
+### 3. Error Management
+```typescript
+const functions = {
+    RobustFunction: (data, params) => {
         try {
-            if (!params || params.length !== 2) return '0';
-            const num1 = Number(params[0]);
-            const num2 = Number(params[1]);
-            
-            if (isNaN(num1) || isNaN(num2) || num2 === 0) return '0';
-            
-            return (num1 / num2).toFixed(2);
+            // Your logic here
+            return someProcessing(params[0]);
         } catch (error) {
-            console.error('SafeDivision error:', error);
-            return '0';
+            // Return a safe default instead of throwing
+            console.warn('RobustFunction error:', error.message);
+            return '';
         }
     }
 };
 ```
 
-### 2. Validazione Parametri
+### 4. Context-Aware Functions
 ```typescript
-const validatedFunctions = {
-    'FormatCurrency': (params: any[]) => {
-        // Validazione rigorosa dei parametri
-        if (!params || !Array.isArray(params) || params.length === 0) {
-            return '€0.00';
-        }
+const functions = {
+    ContextFunction: (data, params) => {
+        // Always check if data exists
+        if (!data) return '';
         
-        const amount = Number(params[0]);
-        if (isNaN(amount)) return '€0.00';
+        // Use optional chaining for nested properties
+        const user = data.user?.profile?.settings;
         
-        const currency = params[1] || '€';
-        const decimals = parseInt(params[2]) || 2;
-        
-        return `${currency}${amount.toFixed(decimals)}`;
+        // Provide meaningful defaults
+        return user?.theme || 'default';
     }
 };
 ```
 
-### 3. Performance Optimization
+## Real-World Use Cases
+
+### 1. Email Templates
 ```typescript
-// Cache per funzioni costose
-const cache = new Map();
-
-const optimizedFunctions = {
-    'ExpensiveCalculation': (params: any[]) => {
-        const cacheKey = JSON.stringify(params);
-        
-        if (cache.has(cacheKey)) {
-            return cache.get(cacheKey);
-        }
-        
-        // Calcolo costoso...
-        const result = performExpensiveCalculation(params);
-        
-        cache.set(cacheKey, result);
-        return result;
+const emailFunctions = {
+    PersonalizedGreeting: (data) => {
+        const time = new Date().getHours();
+        const name = data.user?.firstName || 'there';
+        const greeting = time < 12 ? 'Good morning' : time < 18 ? 'Good afternoon' : 'Good evening';
+        return `${greeting}, ${name}`;
+    },
+    
+    UnsubscribeLink: (data) => {
+        const userId = data.user?.id || '';
+        const token = data.email?.token || '';
+        return `https://example.com/unsubscribe?user=${userId}&token=${token}`;
     }
 };
+
+const emailTemplate = `
+{@PersonalizedGreeting}!
+
+Thank you for your order...
+
+Unsubscribe: {@UnsubscribeLink}
+`;
 ```
 
-## Sovrascrittura Funzioni Built-in
-
-Le funzioni personalizzate possono sovrascrivere quelle built-in:
-
+### 2. Dashboard Widgets
 ```typescript
-const customMath = {
-    // Sovrascrive la funzione Math built-in per aggiungere logging
-    'Math': (params: any[]) => {
-        console.log('Custom Math called with:', params);
+const dashboardFunctions = {
+    ProgressBar: (params) => {
+        const value = parseFloat(params[0] || 0);
+        const max = parseFloat(params[1] || 100);
+        const width = parseInt(params[2] || 20);
         
-        if (!params || params.length !== 3) return null;
+        const filled = Math.round((value / max) * width);
+        const empty = width - filled;
         
-        const operator = params[0];
-        const num1 = Number(params[1]);
-        const num2 = Number(params[2]);
-        
-        let result;
-        switch(operator) {
-            case '+': result = num1 + num2; break;
-            case '-': result = num1 - num2; break;
-            case '*': result = num1 * num2; break;
-            case '/': result = num1 / num2; break;
-            default: result = null;
-        }
-        
-        console.log('Math result:', result);
-        return result;
+        return '█'.repeat(filled) + '░'.repeat(empty) + ` ${value}%`;
+    },
+    
+    StatusIcon: (params) => {
+        const status = params[0]?.toLowerCase() || '';
+        const icons = {
+            'online': '🟢',
+            'offline': '🔴', 
+            'maintenance': '🟡',
+            'error': '🔴'
+        };
+        return icons[status] || '⚪';
     }
 };
-
-templater.setFunctions(customMath);
-templater.parse('{@Math|+|5|3}', {}); // Log: "Custom Math called with: ['+', '5', '3']"
-                                      // Log: "Math result: 8"
-                                      // Output: "8"
 ```
 
-## Conclusioni
+### 3. Report Generation
+```typescript
+const reportFunctions = {
+    FormatCurrency: (data, params) => {
+        const amount = parseFloat(params[0] || 0);
+        const currency = data.settings?.currency || 'USD';
+        
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: currency
+        }).format(amount);
+    },
+    
+    GrowthPercentage: (params) => {
+        const current = parseFloat(params[0] || 0);
+        const previous = parseFloat(params[1] || 0);
+        
+        if (previous === 0) return 'N/A';
+        
+        const growth = ((current - previous) / previous) * 100;
+        const sign = growth >= 0 ? '+' : '';
+        
+        return `${sign}${growth.toFixed(1)}%`;
+    }
+};
+```
 
-Il metodo `setFunctions` rende TsTemplater incredibilmente flessibile, permettendo di:
-
-- **Estendere** le funzionalità con logica di business specifica
-- **Personalizzare** il comportamento per casi d'uso particolari  
-- **Integrare** con sistemi esterni e API
-- **Riutilizzare** codice comune tra diversi template
-- **Mantenere** la separazione tra logica e presentazione
-
-Questa flessibilità permette di adattare la libreria a qualsiasi scenario, dal semplice templating di email ai complessi report dinamici con logiche di business avanzate.
+The custom functions system makes TsTemplater incredibly powerful and adaptable to any business scenario while maintaining simplicity and performance!

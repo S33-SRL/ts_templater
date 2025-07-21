@@ -1,12 +1,12 @@
-// Esempio pratico di funzioni personalizzate per TsTemplater
+// Practical example of custom functions for TsTemplater
 import { TsTemplater } from './src/index';
 
-// Inizializza TsTemplater
-const templater = new TsTemplater('it');
+// Initialize TsTemplater
+const templater = new TsTemplater('en');
 
-// Definisce funzioni personalizzate per il business
+// Define custom business functions
 const businessFunctions = {
-    // Calcola lo sconto in base al tipo di cliente  
+    // Calculate discount based on customer type
     'CustomerDiscount': (data, params) => {
         const amount = Number(params[0]) || 0;
         const customerType = data.customerType;
@@ -23,7 +23,7 @@ const businessFunctions = {
         return (amount * discountRate).toFixed(2);
     },
 
-    // Formatta numeri di telefono in stile italiano
+    // Format phone numbers in Italian style
     'PhoneIT': (params) => {
         if (!params || params.length !== 1) return '';
         const phone = params[0].toString().replace(/\D/g, '');
@@ -36,20 +36,20 @@ const businessFunctions = {
         return phone;
     },
 
-    // Saluto personalizzato in base all'ora
+    // Personalized greeting based on time of day
     'GreetingTime': (data, params) => {
         const hour = new Date().getHours();
-        const name = data.firstName || 'Cliente';
+        const name = data.firstName || 'Customer';
         
         let greeting;
-        if (hour < 12) greeting = 'Buongiorno';
-        else if (hour < 18) greeting = 'Buon pomeriggio';
-        else greeting = 'Buonasera';
+        if (hour < 12) greeting = 'Good morning';
+        else if (hour < 18) greeting = 'Good afternoon';
+        else greeting = 'Good evening';
         
         return `${greeting} ${name}`;
     },
 
-    // Valutazione stellare da 1 a 5
+    // Star rating from 1 to 5
     'StarRating': (params) => {
         const rating = Math.max(1, Math.min(5, Number(params[0]) || 1));
         const fullStars = '⭐'.repeat(Math.floor(rating));
@@ -57,27 +57,27 @@ const businessFunctions = {
         return fullStars + emptyStars;
     },
 
-    // Stato ordine con emoji
+    // Order status with emoji
     'OrderStatusEmoji': (data, params) => {
         const status = data.status;
         const statusMap = {
-            'pending': '⏳ In Attesa',
-            'processing': '🔄 In Elaborazione', 
-            'shipped': '📦 Spedito',
-            'delivered': '✅ Consegnato',
-            'cancelled': '❌ Annullato'
+            'pending': '⏳ Pending',
+            'processing': '🔄 Processing', 
+            'shipped': '📦 Shipped',
+            'delivered': '✅ Delivered',
+            'cancelled': '❌ Cancelled'
         };
-        return statusMap[status] || '❓ Sconosciuto';
+        return statusMap[status] || '❓ Unknown';
     }
 };
 
-// Inietta le funzioni personalizzate
+// Inject custom functions
 templater.setFunctions(businessFunctions);
 
-// Esempio di utilizzo con template email
+// Example usage with email template
 const customerData = {
-    firstName: 'Marco',
-    lastName: 'Rossi',
+    firstName: 'John',
+    lastName: 'Smith',
     customerType: 'premium',
     phone: '3331234567',
     order: {
@@ -86,8 +86,8 @@ const customerData = {
         status: 'shipped',
         items: [
             { name: 'Smartphone', price: 199.90, qty: 1 },
-            { name: 'Cover', price: 29.90, qty: 1 },
-            { name: 'Pellicola', price: 9.90, qty: 1 }
+            { name: 'Case', price: 29.90, qty: 1 },
+            { name: 'Screen Protector', price: 9.90, qty: 1 }
         ]
     },
     review: { rating: 4.5 }
@@ -96,47 +96,47 @@ const customerData = {
 const emailTemplate = `
 {!@GreetingTime} {lastName}! 👋
 
-🎉 Il tuo ordine {order.id} è stato spedito!
+🎉 Your order {order.id} has been shipped!
 
-📞 Per contatti: {!@PhoneIT|{phone}}
+📞 Contact us: {!@PhoneIT|{phone}}
 
 📦 Status: {!@OrderStatusEmoji}
 
-🛍️ Articoli ordinati:
+🛍️ Ordered items:
 {#@ArrayConcat|order.items|• {name} x{qty} - €{price}
 }
 
-💰 Totale: €{order.total}
-💸 Sconto Cliente {customerType}: -€{!@CustomerDiscount|{order.total}}
+💰 Total: €{order.total}
+💸 Customer {customerType} discount: -€{!@CustomerDiscount|{order.total}}
 
-⭐ Valutazione ricevuta: {!@StarRating|{review.rating}}
+⭐ Review received: {!@StarRating|{review.rating}}
 
-Grazie per aver scelto il nostro servizio! 🙏
+Thank you for choosing our service! 🙏
 `;
 
-console.log('=== EMAIL GENERATA ===');
+console.log('=== GENERATED EMAIL ===');
 console.log(templater.parse(emailTemplate, customerData));
 
-// Esempio di template per dashboard amministrativa
+// Example of admin dashboard template
 const dashboardTemplate = `
-📊 DASHBOARD CLIENTI
+📊 CUSTOMER DASHBOARD
 
-Cliente: {firstName} {lastName}
-Tipo: {customerType}
-Telefono: {!@PhoneIT|{phone}}
+Customer: {firstName} {lastName}
+Type: {customerType}
+Phone: {!@PhoneIT|{phone}}
 
-Ordine #{order.id}
-Stato: {!@OrderStatusEmoji}
-Totale: €{order.total}
-Sconto Applicato: €{!@CustomerDiscount|{order.total}}
+Order #{order.id}
+Status: {!@OrderStatusEmoji}
+Total: €{order.total}
+Applied Discount: €{!@CustomerDiscount|{order.total}}
 
-Valutazione: {!@StarRating|{review.rating}}
+Rating: {!@StarRating|{review.rating}}
 `;
 
-console.log('\n=== DASHBOARD ADMIN ===');
+console.log('\n=== ADMIN DASHBOARD ===');
 console.log(templater.parse(dashboardTemplate, customerData));
 
-// Esempio di utilizzo con evaluate() per calcoli
-console.log('\n=== CALCOLI DINAMICI ===');
-console.log('Sconto calcolato:', templater.evaluate('!@CustomerDiscount|{order.total}', customerData));
-console.log('Rating stelle:', templater.evaluate('!@StarRating|{review.rating}', customerData));
+// Example of using evaluate() for calculations
+console.log('\n=== DYNAMIC CALCULATIONS ===');
+console.log('Calculated discount:', templater.evaluate('!@CustomerDiscount|{order.total}', customerData));
+console.log('Star rating:', templater.evaluate('!@StarRating|{review.rating}', customerData));

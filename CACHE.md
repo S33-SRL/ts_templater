@@ -1,123 +1,123 @@
 # Cache System Documentation
 
-TsTemplater include un sistema di cache intelligente **abilitato di default** che migliora significativamente le performance, specialmente quando si elaborano template complessi con accessi ricorsivi agli oggetti.
+TsTemplater includes an intelligent cache system **enabled by default** that significantly improves performance, especially when processing complex templates with recursive object access.
 
-## Configurazione Iniziale
+## Initial Configuration
 
 ```typescript
-// Cache abilitata di default
+// Cache enabled by default
 const templater = new TsTemplater();
 
-// Cache abilitata esplicitamente  
+// Cache explicitly enabled  
 const templaterWithCache = new TsTemplater('en', true);
 
-// Cache disabilitata fin dall'inizio
+// Cache disabled from the start
 const templaterWithoutCache = new TsTemplater('en', false);
 ```
 
-## Come Funziona
+## How It Works
 
-La cache utilizza un sistema di chiavi progressive che rappresenta il percorso di navigazione negli oggetti. Quando si accede a un percorso come `ufficio.stanze[last].tavolo.computers[first].name`, il sistema crea chiavi di cache per ogni livello:
+The cache uses a progressive key system that represents the navigation path through objects. When accessing a path like `office.rooms[last].table.computers[first].name`, the system creates cache keys for each level:
 
-- `ufficio` → proprietà principale
-- `ufficio.stanze` → array stanze
-- `ufficio.stanze[last]` → ultimo elemento dell'array stanze  
-- `ufficio.stanze[last].tavolo` → oggetto tavolo
-- `ufficio.stanze[last].tavolo.computers` → array computers
-- `ufficio.stanze[last].tavolo.computers[first]` → primo computer
-- `ufficio.stanze[last].tavolo.computers[first].name` → nome del computer
+- `office` → main property
+- `office.rooms` → rooms array
+- `office.rooms[last]` → last element of the rooms array  
+- `office.rooms[last].table` → table object
+- `office.rooms[last].table.computers` → computers array
+- `office.rooms[last].table.computers[first]` → first computer
+- `office.rooms[last].table.computers[first].name` → computer name
 
-## Vantaggi
+## Benefits
 
-1. **Riutilizzo Intelligente**: Se successivamente si accede a `ufficio.stanze[last].tavolo.computers[last].name`, il sistema riutilizza tutto il percorso cached fino a `computers` e calcola solo l'accesso finale.
+1. **Intelligent Reuse**: If you subsequently access `office.rooms[last].table.computers[last].name`, the system reuses all the cached path up to `computers` and only calculates the final access.
 
-2. **Gestione di Oggetti Distinti**: Il sistema utilizza un'identità unica per ogni oggetto per evitare conflitti quando si processano elementi diversi di un array.
+2. **Distinct Object Management**: The system uses a unique identity for each object to avoid conflicts when processing different elements of an array.
 
-3. **Performance**: Riduce drasticamente il numero di traversamenti ricorsivi necessari.
+3. **Performance**: Drastically reduces the number of recursive traversals needed.
 
-## API della Cache
+## Cache API
 
 ```typescript
 const templater = new TsTemplater();
 
-// Verifica se la cache è attiva
+// Check if cache is active
 templater.isCacheEnabled(); // true
 
-// Ottieni il numero di entry nella cache
+// Get the number of entries in the cache
 templater.getCacheSize(); // 0
 
-// Ottieni le chiavi della cache (utile per debugging)
+// Get cache keys (useful for debugging)
 templater.getCacheKeys(); // []
 
-// Pulisci la cache
+// Clear the cache
 templater.cleanCache();
 
-// Disabilita la cache (migliora la memoria ma riduce le performance)
+// Disable cache (improves memory but reduces performance)
 templater.disableCache();
 
-// Riabilita la cache
+// Re-enable cache
 templater.enableCache();
 ```
 
-## Esempi di Utilizzo
+## Usage Examples
 
-### Esempio Base
+### Basic Example
 ```typescript
 const data = {
-    ufficio: {
-        stanze: [
-            { numero: 1, tavolo: { computers: [{ name: 'PC1' }, { name: 'PC2' }] } },
-            { numero: 2, tavolo: { computers: [{ name: 'PC3' }, { name: 'PC4' }] } }
+    office: {
+        rooms: [
+            { number: 1, table: { computers: [{ name: 'PC1' }, { name: 'PC2' }] } },
+            { number: 2, table: { computers: [{ name: 'PC3' }, { name: 'PC4' }] } }
         ]
     }
 };
 
 const templater = new TsTemplater();
 
-// Prima chiamata - popola la cache
-const result1 = templater.evaluate('ufficio.stanze[last].tavolo.computers[first].name', data);
+// First call - populates the cache
+const result1 = templater.evaluate('office.rooms[last].table.computers[first].name', data);
 console.log(result1); // 'PC3'
 
-// Seconda chiamata - riutilizza la cache
-const result2 = templater.evaluate('ufficio.stanze[last].tavolo.computers[last].name', data);
-console.log(result2); // 'PC4' (riutilizza il percorso fino a 'computers')
+// Second call - reuses the cache
+const result2 = templater.evaluate('office.rooms[last].table.computers[last].name', data);
+console.log(result2); // 'PC4' (reuses the path up to 'computers')
 ```
 
-### Con Template
+### With Templates
 ```typescript
-const template = 'Il computer si chiama: {ufficio.stanze[last].tavolo.computers[first].name}';
+const template = 'The computer is named: {office.rooms[last].table.computers[first].name}';
 
-// Prima elaborazione - popola la cache
+// First processing - populates the cache
 const result1 = templater.parse(template, data);
 
-// Elaborazioni successive beneficiano della cache
+// Subsequent processing benefits from the cache
 const result2 = templater.parse(template, data);
 ```
 
-### Gestione della Cache in Ambienti con Memoria Limitata
+### Cache Management in Memory-Limited Environments
 ```typescript
-// Disabilita la cache per risparmiare memoria
+// Disable cache to save memory
 templater.disableCache();
 
-// Ora tutte le operazioni funzionano senza cache
+// Now all operations work without cache
 const result = templater.parse(template, data);
 
-// Riabilita quando le performance sono più importanti
+// Re-enable when performance is more important
 templater.enableCache();
 ```
 
-## Note Tecniche
+## Technical Notes
 
-- La cache viene automaticamente inizializzata nel costruttore
-- Le chiavi di cache includono un identificativo dell'oggetto per evitare conflitti
-- La cache gestisce correttamente valori `null`, `undefined`, e oggetti circolari
-- La disabilitazione della cache non causa perdita di funzionalità, solo riduzione delle performance
+- Cache is automatically initialized in the constructor
+- Cache keys include an object identifier to avoid conflicts
+- Cache properly handles `null`, `undefined`, and circular objects
+- Disabling cache doesn't cause loss of functionality, only performance reduction
 
-## Benefici per le Performance
+## Performance Benefits
 
-Con dataset complessi e template con molteplici accessi allo stesso percorso base, la cache può ridurre i tempi di elaborazione del 60-80%, specialmente in scenari con:
+With complex datasets and templates with multiple accesses to the same base path, the cache can reduce processing times by 60-80%, especially in scenarios with:
 
-- Array con molti elementi
-- Oggetti deeply nested
-- Template che riutilizzano lo stesso percorso base con indici diversi
-- Elaborazioni batch di molti template simili
+- Arrays with many elements
+- Deeply nested objects
+- Templates that reuse the same base path with different indices
+- Batch processing of many similar templates

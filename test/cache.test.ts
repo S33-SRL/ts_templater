@@ -9,180 +9,180 @@ describe('TsTemplater Cache Tests', () => {
 
     it('should cache simple property access', () => {
         const data = {
-            ufficio: {
-                nome: 'Sede Centrale',
-                stanze: [
-                    { numero: 1, tavolo: { computers: [{ name: 'PC1' }, { name: 'PC2' }] } },
-                    { numero: 2, tavolo: { computers: [{ name: 'PC3' }, { name: 'PC4' }] } }
+            office: {
+                name: 'Main Office',
+                rooms: [
+                    { number: 1, table: { computers: [{ name: 'PC1' }, { name: 'PC2' }] } },
+                    { number: 2, table: { computers: [{ name: 'PC3' }, { name: 'PC4' }] } }
                 ]
             }
         };
 
-        // Primo accesso - dovrebbe popolare la cache
-        const result1 = templater.evaluate('ufficio.nome', data);
-        expect(result1).toBe('Sede Centrale');
+        // First access - should populate the cache
+        const result1 = templater.evaluate('office.name', data);
+        expect(result1).toBe('Main Office');
 
-        // Secondo accesso - dovrebbe usare la cache
-        const result2 = templater.evaluate('ufficio.nome', data);
-        expect(result2).toBe('Sede Centrale');
+        // Second access - should use the cache
+        const result2 = templater.evaluate('office.name', data);
+        expect(result2).toBe('Main Office');
         expect(result1).toBe(result2);
     });
 
     it('should cache nested object and array access', () => {
         const data = {
-            ufficio: {
-                stanze: [
-                    { numero: 1, tavolo: { computers: [{ name: 'PC1' }, { name: 'PC2' }] } },
-                    { numero: 2, tavolo: { computers: [{ name: 'PC3' }, { name: 'PC4' }] } }
+            office: {
+                rooms: [
+                    { number: 1, table: { computers: [{ name: 'PC1' }, { name: 'PC2' }] } },
+                    { number: 2, table: { computers: [{ name: 'PC3' }, { name: 'PC4' }] } }
                 ]
             }
         };
 
-        // Accesso al computer dell'ultima stanza
-        const result1 = templater.evaluate('ufficio.stanze[last].tavolo.computers[first].name', data);
+        // Access to computer in the last room
+        const result1 = templater.evaluate('office.rooms[last].table.computers[first].name', data);
         expect(result1).toBe('PC3');
 
-        // Secondo accesso allo stesso percorso - dovrebbe usare la cache
-        const result2 = templater.evaluate('ufficio.stanze[last].tavolo.computers[first].name', data);
+        // Second access to the same path - should use the cache
+        const result2 = templater.evaluate('office.rooms[last].table.computers[first].name', data);
         expect(result2).toBe('PC3');
 
-        // Accesso a un percorso simile che dovrebbe riutilizzare parte della cache
-        const result3 = templater.evaluate('ufficio.stanze[last].tavolo.computers[last].name', data);
+        // Access to a similar path that should reuse part of the cache
+        const result3 = templater.evaluate('office.rooms[last].table.computers[last].name', data);
         expect(result3).toBe('PC4');
     });
 
     it('should cache progressive path building correctly', () => {
         const data = {
-            ufficio: {
-                stanze: [
-                    { numero: 1, tavolo: { computers: [{ name: 'PC1' }, { name: 'PC2' }] } },
-                    { numero: 2, tavolo: { computers: [{ name: 'PC3' }, { name: 'PC4' }] } }
+            office: {
+                rooms: [
+                    { number: 1, table: { computers: [{ name: 'PC1' }, { name: 'PC2' }] } },
+                    { number: 2, table: { computers: [{ name: 'PC3' }, { name: 'PC4' }] } }
                 ]
             }
         };
 
-        // Primo accesso - popola la cache per tutto il percorso
-        const result1 = templater.evaluate('ufficio.stanze[last].tavolo.computers[first].name', data);
+        // First access - populates the cache for the entire path
+        const result1 = templater.evaluate('office.rooms[last].table.computers[first].name', data);
         expect(result1).toBe('PC3');
 
-        // Mock per verificare che la cache viene utilizzata
+        // Mock to verify that cache is being used
         const originalFromContext = templater['fromContext'];
         const mockFromContext = jest.fn(originalFromContext.bind(templater));
         templater['fromContext'] = mockFromContext;
 
-        // Secondo accesso - dovrebbe utilizzare la cache
-        const result2 = templater.evaluate('ufficio.stanze[last].tavolo.computers[last].name', data);
+        // Second access - should use the cache
+        const result2 = templater.evaluate('office.rooms[last].table.computers[last].name', data);
         expect(result2).toBe('PC4');
 
-        // Ripristina il metodo originale
+        // Restore original method
         templater['fromContext'] = originalFromContext;
     });
 
     it('should clear cache correctly', () => {
         const data = {
-            ufficio: {
-                nome: 'Sede Centrale'
+            office: {
+                name: 'Main Office'
             }
         };
 
-        // Primo accesso - popola la cache
-        const result1 = templater.evaluate('ufficio.nome', data);
-        expect(result1).toBe('Sede Centrale');
+        // First access - populates the cache
+        const result1 = templater.evaluate('office.name', data);
+        expect(result1).toBe('Main Office');
 
-        // Verifica che la cache non sia vuota
+        // Verify that cache is not empty
         expect(templater['cache']).toBeDefined();
-        expect(Object.keys(templater['cache'] || {}).length).toBeGreaterThanOrEqual(2); // Almeno 'ufficio' e 'ufficio.nome'
+        expect(Object.keys(templater['cache'] || {}).length).toBeGreaterThanOrEqual(2); // At least 'office' and 'office.name'
 
-        // Pulisce la cache
+        // Clear the cache
         templater.cleanCache();
 
-        // Verifica che la cache sia vuota
+        // Verify that cache is empty
         expect(templater['cache']).toEqual({});
     });
 
     it('should handle array access with filters in cache', () => {
         const data = {
             items: [
-                { id: '1', value: 'primo' },
-                { id: '2', value: 'secondo' },
-                { id: '3', value: 'terzo' }
+                { id: '1', value: 'first' },
+                { id: '2', value: 'second' },
+                { id: '3', value: 'third' }
             ]
         };
 
-        // Accesso con filtro
+        // Access with filter
         const result1 = templater.evaluate('items[2,id].value', data);
-        expect(result1).toBe('secondo');
+        expect(result1).toBe('second');
 
-        // Secondo accesso con stesso filtro - dovrebbe usare la cache
+        // Second access with same filter - should use the cache
         const result2 = templater.evaluate('items[2,id].value', data);
-        expect(result2).toBe('secondo');
+        expect(result2).toBe('second');
 
-        // Accesso con filtro diverso
+        // Access with different filter
         const result3 = templater.evaluate('items[3,id].value', data);
-        expect(result3).toBe('terzo');
+        expect(result3).toBe('third');
     });
 
     it('should cache work with template parsing', () => {
         const data = {
-            ufficio: {
-                stanze: [
-                    { numero: 1, tavolo: { computers: [{ name: 'PC1' }, { name: 'PC2' }] } },
-                    { numero: 2, tavolo: { computers: [{ name: 'PC3' }, { name: 'PC4' }] } }
+            office: {
+                rooms: [
+                    { number: 1, table: { computers: [{ name: 'PC1' }, { name: 'PC2' }] } },
+                    { number: 2, table: { computers: [{ name: 'PC3' }, { name: 'PC4' }] } }
                 ]
             }
         };
 
-        const template = 'Il computer si chiama: {ufficio.stanze[last].tavolo.computers[first].name}';
+        const template = 'The computer is named: {office.rooms[last].table.computers[first].name}';
         
-        // Primo parsing
+        // First parsing
         const result1 = templater.parse(template, data);
-        expect(result1).toBe('Il computer si chiama: PC3');
+        expect(result1).toBe('The computer is named: PC3');
 
-        // Secondo parsing - dovrebbe beneficiare della cache
+        // Second parsing - should benefit from the cache
         const result2 = templater.parse(template, data);
-        expect(result2).toBe('Il computer si chiama: PC3');
+        expect(result2).toBe('The computer is named: PC3');
     });
 
     it('should handle undefined and null values in cache', () => {
         const data = {
-            ufficio: {
-                stanze: null
+            office: {
+                rooms: null
             }
         };
 
-        // Accesso a proprietà nulla
-        const result1 = templater.evaluate('ufficio.stanze.numero', data);
+        // Access to null property
+        const result1 = templater.evaluate('office.rooms.number', data);
         expect(result1).toBeNull();
 
-        // Secondo accesso - dovrebbe usare la cache
-        const result2 = templater.evaluate('ufficio.stanze.numero', data);
+        // Second access - should use the cache
+        const result2 = templater.evaluate('office.rooms.number', data);
         expect(result2).toBeNull();
     });
 
     it('should provide comprehensive cache management API', () => {
         const data = { test: 'value' };
 
-        // Inizialmente cache vuota
+        // Initially cache empty
         expect(templater.isCacheEnabled()).toBeTruthy();
         expect(templater.getCacheSize()).toBe(0);
         expect(templater.getCacheKeys()).toEqual([]);
 
-        // Dopo un accesso, cache popolata
+        // After an access, cache populated
         templater.evaluate('test', data);
         expect(templater.getCacheSize()).toBeGreaterThan(0);
         expect(templater.getCacheKeys().length).toBeGreaterThan(0);
 
-        // Disabilita cache
+        // Disable cache
         templater.disableCache();
         expect(templater.isCacheEnabled()).toBeFalsy();
         expect(templater.getCacheSize()).toBe(0);
 
-        // Riabilita cache
+        // Re-enable cache
         templater.enableCache();
         expect(templater.isCacheEnabled()).toBeTruthy();
         expect(templater.getCacheSize()).toBe(0);
 
-        // Pulisce cache
+        // Clear cache
         templater.evaluate('test', data);
         templater.cleanCache();
         expect(templater.getCacheSize()).toBe(0);
@@ -190,26 +190,26 @@ describe('TsTemplater Cache Tests', () => {
 
     it('should work correctly with disabled cache', () => {
         const data = {
-            ufficio: {
-                stanze: [
-                    { numero: 1, tavolo: { computers: [{ name: 'PC1' }, { name: 'PC2' }] } },
-                    { numero: 2, tavolo: { computers: [{ name: 'PC3' }, { name: 'PC4' }] } }
+            office: {
+                rooms: [
+                    { number: 1, table: { computers: [{ name: 'PC1' }, { name: 'PC2' }] } },
+                    { number: 2, table: { computers: [{ name: 'PC3' }, { name: 'PC4' }] } }
                 ]
             }
         };
 
-        // Disabilita la cache
+        // Disable the cache
         templater.disableCache();
 
-        // Le operazioni dovrebbero funzionare comunque
-        const result1 = templater.evaluate('ufficio.stanze[last].tavolo.computers[first].name', data);
+        // Operations should work anyway
+        const result1 = templater.evaluate('office.rooms[last].table.computers[first].name', data);
         expect(result1).toBe('PC3');
 
-        const result2 = templater.evaluate('ufficio.stanze[last].tavolo.computers[last].name', data);
+        const result2 = templater.evaluate('office.rooms[last].table.computers[last].name', data);
         expect(result2).toBe('PC4');
 
-        // Template parsing dovrebbe funzionare
-        const template = 'Computer: {ufficio.stanze[first].tavolo.computers[first].name}';
+        // Template parsing should work
+        const template = 'Computer: {office.rooms[first].table.computers[first].name}';
         const result3 = templater.parse(template, data);
         expect(result3).toBe('Computer: PC1');
     });
@@ -223,11 +223,11 @@ describe('TsTemplater Cache Tests', () => {
 
         const data = { test: 'value' };
 
-        // Entrambi dovrebbero funzionare
+        // Both should work
         expect(templaterWithCache.evaluate('test', data)).toBe('value');
         expect(templaterWithoutCache.evaluate('test', data)).toBe('value');
 
-        // Solo quello con cache dovrebbe avere entry nella cache
+        // Only the one with cache should have entries in cache
         expect(templaterWithCache.getCacheSize()).toBeGreaterThan(0);
         expect(templaterWithoutCache.getCacheSize()).toBe(0);
     });
