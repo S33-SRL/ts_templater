@@ -1,9 +1,25 @@
 {
   "name": "ts-templater",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "A flexible TypeScript library for dynamic string templating.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/ts-templater.es.js",
+      "require": "./dist/ts-templater.umd.js"
+    },
+    "./cache": {
+      "types": "./dist/cache/index.d.ts"
+    },
+    "./functions": {
+      "types": "./dist/functions/index.d.ts"
+    },
+    "./parser": {
+      "types": "./dist/parser/index.d.ts"
+    }
+  },
   "scripts": {
     "build": "vite build",
     "test": "jest",

@@ -64,18 +64,18 @@ describe('TsTemplater Cache Tests', () => {
         // First access - populates the cache for the entire path
         const result1 = templater.evaluate('office.rooms[last].table.computers[first].name', data);
         expect(result1).toBe('PC3');
-
-        // Mock to verify that cache is being used
-        const originalFromContext = templater['fromContext'];
-        const mockFromContext = jest.fn(originalFromContext.bind(templater));
-        templater['fromContext'] = mockFromContext;
+        
+        // Verify cache is being used by checking cache size increases
+        const cacheSize1 = templater.getCacheSize();
+        expect(cacheSize1).toBeGreaterThan(0);
 
         // Second access - should use the cache
         const result2 = templater.evaluate('office.rooms[last].table.computers[last].name', data);
         expect(result2).toBe('PC4');
-
-        // Restore original method
-        templater['fromContext'] = originalFromContext;
+        
+        // Cache size should have increased (new path cached)
+        const cacheSize2 = templater.getCacheSize();
+        expect(cacheSize2).toBeGreaterThan(cacheSize1);
     });
 
     it('should clear cache correctly', () => {
@@ -90,14 +90,15 @@ describe('TsTemplater Cache Tests', () => {
         expect(result1).toBe('Main Office');
 
         // Verify that cache is not empty
-        expect(templater['cache']).toBeDefined();
-        expect(Object.keys(templater['cache'] || {}).length).toBeGreaterThanOrEqual(2); // At least 'office' and 'office.name'
+        expect(templater.isCacheEnabled()).toBeTruthy();
+        expect(templater.getCacheSize()).toBeGreaterThan(0); // Cache should have entries
 
         // Clear the cache
         templater.cleanCache();
 
         // Verify that cache is empty
-        expect(templater['cache']).toEqual({});
+        expect(templater.getCacheSize()).toBe(0);
+        expect(templater.getCacheKeys()).toEqual([]);
     });
 
     it('should handle array access with filters in cache', () => {

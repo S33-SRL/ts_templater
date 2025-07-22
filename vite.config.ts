@@ -16,7 +16,8 @@ export default defineConfig({
         globals: {
           dayjs: 'dayjs',
           'bignumber.js': 'BigNumber'
-        }
+        },
+        exports: 'named' // Risolve il warning sul default export
       }
     }
   }
