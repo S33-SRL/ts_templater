@@ -1,6 +1,6 @@
 {
   "name": "ts-templater",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "A flexible TypeScript library for dynamic string templating.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -20,6 +20,12 @@
       "types": "./dist/parser/index.d.ts"
     }
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "scripts": {
     "build": "vite build",
     "test": "jest",
