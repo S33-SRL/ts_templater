@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2025-07-22
+
+### Fixed 🐛
+- **Angular/Browser Compatibility**: Resolved dynamic import issue with dayjs locales
+  - Removed async dynamic imports that caused bundler errors
+  - Made `changeDayjsLocale()` synchronous for better compatibility
+  - Fixed "Failed to resolve module specifier 'dayjs/locale/en.js'" error
+
+### Added 📚
+- **Angular Setup Documentation**: Added specific instructions for using the library in Angular/browser environments
+  - Clear examples of how to import dayjs locales manually
+  - Usage guidelines for different frameworks
+
+### Changed 🔄
+- **TypeScript Declaration Generation**: Fixed Vite configuration to properly generate .d.ts files
+  - Added explicit TypeScript plugin configuration in vite.config.ts
+  - Ensures all type definitions are correctly generated during build
+
+### Improved 💪
+- **NPM Package Optimization**: Added 'files' field to package.json
+  - Only publishes necessary files (dist/, docs, license)
+  - Reduced package size from full repository to 22.8 kB
+
+### Developer Experience 🛠️
+- **Test Suite Updates**: Updated all tests to work with synchronous locale changes
+  - Added dayjs locale imports to test files
+  - Fixed all async/await usage in locale-related tests
+  - All 135 tests now pass successfully
+
+## [0.4.0] - 2025-07-22
+
+### Added ⭐
+- **TypeScript Declarations**: Properly configured TypeScript declaration file generation
+- **Package Optimization**: Configured npm to publish only essential files
+
 ## [0.3.0] - 2025-07-22
 
 ### Added ⭐

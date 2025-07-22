@@ -61,6 +61,25 @@ npm install ts-templater
 yarn add ts-templater
 ```
 
+### 🅰️ **Angular/Browser Setup**
+
+When using ts-templater in Angular or browser environments, dayjs locales must be imported manually:
+
+```typescript
+// Import the library
+import { TsTemplater } from 'ts-templater';
+import dayjs from 'dayjs';
+
+// Import needed locales
+import 'dayjs/locale/it';  // Italian
+import 'dayjs/locale/fr';  // French
+import 'dayjs/locale/es';  // Spanish
+
+// Use the templater
+const templater = new TsTemplater();
+templater.changeDayjsLocale('it'); // Switch to Italian
+```
+
 </div>
 
 ---

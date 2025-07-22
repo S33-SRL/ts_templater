@@ -1,4 +1,7 @@
 import { TsTemplater } from '../src/index';
+import dayjs from 'dayjs';
+import 'dayjs/locale/it';
+import 'dayjs/locale/fr';
 
 describe('TsTemplater - Advanced Features', () => {
   let tmpEngine = new TsTemplater();
@@ -96,9 +99,9 @@ describe('TsTemplater - Advanced Features', () => {
   });
 
   describe('Locale and internationalization', () => {
-    it('should handle date formatting with different locales', async () => {
+    it('should handle date formatting with different locales', () => {
       const tmpEngineIt = new TsTemplater('it');
-      await tmpEngineIt.changeDayjsLocale('it');
+      tmpEngineIt.changeDayjsLocale('it');
       
       const data = { date: '2024-01-15' };
       const result = tmpEngineIt.parse('{@Date|{date}|MMMM}', data);

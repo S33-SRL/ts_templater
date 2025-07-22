@@ -1,4 +1,7 @@
 import { TsTemplater } from '../src/index';
+import dayjs from 'dayjs';
+import 'dayjs/locale/it';
+import 'dayjs/locale/fr';
 
 describe('TsTemplater - Configuration and State Management', () => {
   
@@ -123,17 +126,17 @@ describe('TsTemplater - Configuration and State Management', () => {
       tmpEngine = new TsTemplater();
     });
 
-    it('should handle valid locale changes', async () => {
-      await tmpEngine.changeDayjsLocale('fr');
+    it('should handle valid locale changes', () => {
+      tmpEngine.changeDayjsLocale('fr');
       
       const data = { date: '2024-01-15' };
       const result = tmpEngine.parse('{@Date|{date}|MMMM}', data);
       expect(result).toBe('janvier'); // January in French
     });
 
-    it('should handle invalid locale gracefully', async () => {
+    it('should handle invalid locale gracefully', () => {
       // Should not throw error for invalid locale
-      await expect(tmpEngine.changeDayjsLocale('invalid-locale')).resolves.not.toThrow();
+      expect(() => tmpEngine.changeDayjsLocale('invalid-locale')).not.toThrow();
       
       // Should still work with original locale
       const data = { date: '2024-01-15' };

@@ -57,17 +57,16 @@ export class TsTemplater {
    * Cambia la lingua di dayjs per la formattazione delle date
    * @param lang Codice lingua (es. 'it', 'en', 'fr')
    */
-  async changeDayjsLocale(lang: string) {
+  changeDayjsLocale(lang: string) {
     try {
       this.currentLang = lang;
-      // Prova a importare la localizzazione specifica dinamicamente
-      const locale = await import(`dayjs/locale/${lang}.js`);
+      // Imposta il locale se è già stato caricato
       dayjs.locale(lang);
       
       // Aggiorna il contesto delle funzioni
       this.functionManager.updateContext({ currentLang: lang });
     } catch (error) {
-      console.error(`Locale ${lang} not found for dayjs`, error);
+      console.error(`Error setting locale ${lang} for dayjs`, error);
     }
   }
 
