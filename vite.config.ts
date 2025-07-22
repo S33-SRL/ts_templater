@@ -2,7 +2,13 @@ import { defineConfig } from 'vite';
 import typescript from '@rollup/plugin-typescript';
 
 export default defineConfig({
-  plugins: [typescript()],
+  plugins: [
+    typescript({
+      declaration: true,
+      declarationDir: './dist',
+      rootDir: './src'
+    })
+  ],
   build: {
     lib: {
       entry: 'src/index.ts',
